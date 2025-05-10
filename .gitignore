@@ -1,0 +1,55 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+.modified
+
+# logs
+*.log
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# dotenv environment variables file
+.env
+.env.local
+.env.development.local 
+.env.test.local 
+.env.production.local
+
+# testing
+/coverage
+/test-results
+playwright-report/*
+
+#firebase
+/firebase-debug.log
+/firebase-debug.log.lck
+/firebase.json
+serviceAccountKey.json
+
+#IDEs
+.vscode
+.idx

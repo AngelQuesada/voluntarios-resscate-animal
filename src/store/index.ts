@@ -1,0 +1,22 @@
+import { configureStore } from "@reduxjs/toolkit";
+import { setupListeners } from "@reduxjs/toolkit/query";
+import { api } from "@/store/api/baseApi";
+import { usersApi } from "@/store/api/usersApi";
+
+export const store = configureStore({
+  reducer: {
+    [api.reducerPath]: api.reducer,
+    [usersApi.reducerPath]: usersApi.reducer,
+  },
+  // Agregar el middleware de la API habilita la caché, invalidación, sondeo y otras características
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(
+      api.middleware,
+      usersApi.middleware
+    ),
+});
+
+setupListeners(store.dispatch);
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "restart project": "npx rimraf node_modules .next .cache package-lock.json && npm install",
-    "create-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" src/scripts/create-test-users.ts"
+    "create-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" src/scripts/create-test-users.ts",
+    "test": "playwright test",
+    "test:login": "playwright test tests/e2e/login.spec.ts",
+    "test:role-assignment": "playwright test tests/e2e/role-assignment.spec.ts",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
     "@emotion/cache": "^11.11.0",

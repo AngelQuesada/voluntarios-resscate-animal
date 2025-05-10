@@ -9,6 +9,9 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
     await page.fill('input[name="password"]', 'testing');
     await page.click('button[type="submit"]');
     
+    // Añadir tiempo de espera para la redirección
+    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
     
@@ -92,6 +95,9 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
     await page.fill('input[name="password"]', 'testing');
     await page.click('button[type="submit"]');
     
+    // Añadir tiempo de espera para la redirección
+    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
     
@@ -174,6 +180,9 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
     await page.fill('input[name="email"]', 'voluntariotest@voluntario.com');
     await page.fill('input[name="password"]', 'testing');
     await page.click('button[type="submit"]');
+    
+    // Añadir tiempo de espera para la redirección
+    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
     
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);

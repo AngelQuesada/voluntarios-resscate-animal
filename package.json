@@ -3,12 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "// App": "Scripts para la aplicación",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "restart project": "npx rimraf node_modules .next .cache package-lock.json && npm install",
+    
+    "// Mantenimiento": "Scripts de mantenimiento del proyecto",
+    "restart-project": "npx rimraf node_modules .next .cache package-lock.json && npm install",
     "create-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" src/scripts/create-test-users.ts",
+    
+    "// Testing": "Scripts para pruebas",
     "test": "playwright test",
     "test:login": "playwright test tests/e2e/login.spec.ts",
     "test:role-assignment": "playwright test tests/e2e/role-assignment.spec.ts",

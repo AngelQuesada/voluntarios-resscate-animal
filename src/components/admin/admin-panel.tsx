@@ -74,7 +74,17 @@ export function AdminPanel() {
     handleCloseUserDetailDialog,
     handleSearchChange,
     filteredUsers,
+    handleEnabledSwitchChange,
+    handleEditEnabledSwitchChange,
   } = useAdminPanel();
+
+  const sortedFilteredUsers = React.useMemo(() => {
+    return filteredUsers.sort((a, b) => {
+      if (a.isEnabled !== false && b.isEnabled === false) return -1;
+      if (a.isEnabled === false && b.isEnabled !== false) return 1;
+      return `${a.name} ${a.lastname}`.localeCompare(`${b.name} ${b.lastname}`);
+    });
+  }, [filteredUsers]);
 
   return (
     <>
@@ -172,7 +182,7 @@ export function AdminPanel() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers
+                  sortedFilteredUsers
                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                     .map((user) => (
                       <TableRow
@@ -180,6 +190,12 @@ export function AdminPanel() {
                         role="checkbox"
                         tabIndex={-1}
                         key={user.uid}
+                        sx={{
+                          opacity: user.isEnabled === false ? 0.5 : 1,
+                          '& .MuiTableCell-root': {
+                            color: user.isEnabled === false ? 'text.disabled' : 'text.primary',
+                          }
+                        }}
                       >
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -282,13 +298,13 @@ export function AdminPanel() {
           open={isAddDialogOpen}
           onClose={() => setIsAddDialogOpen(false)}
           title="Añadir Nuevo Usuario"
-          contentText="Introduce la información del nuevo usuario. La contraseña debe tener al menos 6 caracteres."
           content={
             <UserForm
               userData={newUserInfo}
               handleChange={handleInputChange}
               setUserData={setNewUserInfo}
               isAddMode={true}
+              handleEnabledSwitchChange={handleEnabledSwitchChange}
             />
           }
           error={formError}
@@ -313,6 +329,7 @@ export function AdminPanel() {
               handleChange={handleEditInputChange}
               setUserData={setEditUserInfo}
               isAddMode={false}
+              handleEnabledSwitchChange={handleEditEnabledSwitchChange}
             />
           }
           error={formError}

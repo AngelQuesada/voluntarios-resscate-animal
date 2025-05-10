@@ -484,10 +484,11 @@ export function useScheduleContent({
 
   const renderShiftAssignmentList = (dayKey: string, shiftKey: "M" | "T") => {
     const assignmentsToRender = processedAssignments[dayKey]?.[shiftKey];
-    const assignmentsList = assignmentsToRender ?? [];
     const isAdmin = currentUser?.roles?.includes(UserRoles.ADMINISTRADOR);
 
-    if (assignmentsList.length === 0 && !isAdmin) {
+    const assignmentsList = assignmentsToRender ?? [];
+
+    if (assignmentsList.length === 0) {
       return (
         <Typography variant="body2" color="text.secondary">
           Nadie asignado
@@ -572,6 +573,9 @@ export function useScheduleContent({
                     fontSize: "0.7rem",
                     userSelect: "none",
                     cursor: canContact ? 'pointer' : 'default',
+                    ...(isAdmin && usersMap[assignment.uid]?.isEnabled === false && {
+                      textDecoration: 'line-through',
+                    }),
                   }}
                 >
                   {assignment.name}

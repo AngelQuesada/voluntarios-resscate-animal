@@ -14,6 +14,7 @@ interface EditUserInfoState {
   phone: string;
   job: string;
   location: string;
+  isEnabled: boolean;
 }
 
 interface NewUserInfoState {
@@ -27,6 +28,7 @@ interface NewUserInfoState {
   job: string;
   location: string;
   password: string;
+  isEnabled: boolean;
 }
 
 export const useAdminPanel = () => {
@@ -47,6 +49,7 @@ export const useAdminPanel = () => {
     job: '',
     location: '',
     password: '',
+    isEnabled: true,
   });
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -65,6 +68,7 @@ export const useAdminPanel = () => {
     phone: '',
     job: '',
     location: '',
+    isEnabled: true,
   });
 
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -112,6 +116,20 @@ export const useAdminPanel = () => {
   ) => {
     const { name, value } = e.target;
     setEditUserInfo(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEnabledSwitchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewUserInfo(prev => ({
+      ...prev,
+      isEnabled: event.target.checked,
+    }));
+  };
+
+  const handleEditEnabledSwitchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEditUserInfo(prev => ({
+      ...prev,
+      isEnabled: event.target.checked,
+    }));
   };
 
   const handleAddUser = async () => {
@@ -171,6 +189,7 @@ export const useAdminPanel = () => {
         job: newUserInfo.job,
         location: newUserInfo.location,
         createdAt: new Date().toISOString(),
+        isEnabled: newUserInfo.isEnabled,
       };
 
       await setDoc(doc(db, 'users', user.uid), userDataForFirestore);
@@ -186,6 +205,7 @@ export const useAdminPanel = () => {
         job: '',
         location: '',
         password: '',
+        isEnabled: true,
       });
 
       setIsAddDialogOpen(false);
@@ -231,6 +251,7 @@ export const useAdminPanel = () => {
       phone: user.phone || '',
       job: user.job || '',
       location: user.location || '',
+      isEnabled: user.isEnabled !== false,
     });
     setIsEditDialogOpen(true);
     setFormError(null);
@@ -267,6 +288,7 @@ export const useAdminPanel = () => {
         phone: editUserInfo.phone,
         job: editUserInfo.job,
         location: editUserInfo.location,
+        isEnabled: editUserInfo.isEnabled,
       });
 
       setIsEditDialogOpen(false);
@@ -409,5 +431,7 @@ export const useAdminPanel = () => {
     handleCloseUserDetailDialog,
     handleSearchChange,
     filteredUsers,
+    handleEnabledSwitchChange,
+    handleEditEnabledSwitchChange,
   };
 };

@@ -1,5 +1,5 @@
 import React from "react";
-import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip } from "@mui/material";
+import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip, Switch, FormControlLabel } from "@mui/material";
 import { UserRoles } from "@/lib/constants";
 
 // Definir las opciones de roles para el Autocomplete, incluyendo el color
@@ -13,13 +13,15 @@ interface UserFormProps {
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setUserData: (value: React.SetStateAction<any>) => void;
   isAddMode?: boolean;
+  handleEnabledSwitchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const UserForm: React.FC<UserFormProps> = ({ 
   userData, 
   handleChange, 
   setUserData, 
-  isAddMode = false 
+  isAddMode = false,
+  handleEnabledSwitchChange 
 }) => {
   return (
     <>
@@ -35,6 +37,21 @@ const UserForm: React.FC<UserFormProps> = ({
         onChange={handleChange}
         required
       />
+      
+      {/* Switch para habilitar/deshabilitar usuario */}
+      <FormControlLabel
+        control={
+          <Switch
+            checked={userData.isEnabled !== false}
+            onChange={handleEnabledSwitchChange}
+            name="isEnabled"
+            color="primary"
+          />
+        }
+        label={userData.isEnabled !== false ? "Usuario Habilitado" : "Usuario Deshabilitado"}
+        sx={{ my: 1, display: 'block' }}
+      />
+      
       <TextField
         margin="dense"
         name="name"

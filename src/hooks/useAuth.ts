@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
 
 export function useAuth() {
   const [email, setEmail] = useState("");
@@ -17,8 +18,21 @@ export function useAuth() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      // Verificar si el usuario está habilitado en Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.isEnabled === false) {
+          await auth.signOut();
+          setError("Esta cuenta ha sido deshabilitada por el administrador. Por favor, contacta con el administrador para más información.");
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       // Obtener el token del usuario
-      const token = await userCredential.user.getIdToken();
+      const token = await user.getIdToken();
       // Guardar el token en una cookie 
       //TODO: Cambiar el tiempo de expiración
       document.cookie = `auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;

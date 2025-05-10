@@ -4,16 +4,17 @@
  * Representa la estructura de datos de un usuario en Firestore y en la aplicación.
  */
 export interface User {
-  id?: string; // ID de Firestore (opcional, puede ser el uid)
-  uid: string; // ID de Firebase Authentication
+  id?: string;
+  uid: string;
   username: string;
-  roles: number[]; // Cambiado de string a number para usar niveles numéricos
+  roles: number[];
   name: string;
   lastname: string;
-  birthdate: string; // Considerar usar tipo Date o timestamp
+  birthdate: string;
   email: string;
   phone: string;
-  job?: string; // Opcional
-  location?: string; // Opcional
-  createdAt: string; // Considerar usar tipo Date o timestamp
+  job?: string;
+  location?: string;
+  createdAt: string;
+  isEnabled?: boolean; 
 }

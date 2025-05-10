@@ -37,7 +37,17 @@ const SearchInput: React.FC<SearchInputProps> = ({
           />
         ) : (
           <Tooltip title="Buscar Usuario">
-            <IconButton onClick={handleSearchIconClick} sx={{ mr: 1 }}>
+            <IconButton 
+              onClick={handleSearchIconClick} 
+              sx={{ 
+                mr: 1, 
+                bgcolor: 'primary.main', 
+                color: 'white',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                }
+              }}
+            >
               <SearchIcon />
             </IconButton>
           </Tooltip>

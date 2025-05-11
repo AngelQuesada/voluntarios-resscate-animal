@@ -26,6 +26,7 @@ import Tab from "@mui/material/Tab";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import CircleIcon from "@mui/icons-material/Circle";
+import HistoryIcon from "@mui/icons-material/History";
 import { Badge } from "@mui/material";
 import ConfirmAssignmentDialog from "./ConfirmAssignmentDialog";
 import NotificationSnackbar from "./NotificationSnackbar";
@@ -33,12 +34,15 @@ import ContactDialog from "./ContactDialog";
 import { useTheme } from "@mui/material/styles";
 import ConfirmRemoveUserDialog from "./ConfirmRemoveUserDialog";
 import AddUserToShiftDialog from "./AddUserToShiftDialog";
+import { useRouter } from "next/navigation";
+import { UserRoles } from "@/lib/constants";
 
 export default function ScheduleContent({
   startDate,
   endDate,
 }: ScheduleContentProps) {
   const theme = useTheme();
+  const router = useRouter();
 
   // Memoizar el rango de fechas para evitar recálculos innecesarios
   const daysToDisplay = useMemo(() => {
@@ -84,6 +88,23 @@ export default function ScheduleContent({
     startDate: daysToDisplay[0],
     endDate: daysToDisplay[daysToDisplay.length - 1],
   });
+
+  // Verificar si el usuario actual es administrador
+  const isAdmin = useMemo(() => {
+    if (!currentUser || !Array.isArray(currentUser.roles)) return false;
+    return currentUser.roles.includes(UserRoles.ADMINISTRADOR);
+  }, [currentUser]);
+
+  // Manejar el cambio de pestaña para incluir la navegación a la página de historial
+  const handleTabChangeWithHistory = (event: React.SyntheticEvent, newValue: number) => {
+    // Si la nueva pestaña es la de historial (valor 2), navegar a la página de historial
+    if (newValue === 2) {
+      router.push('/admin/history');
+      return;
+    }
+    // Si no, usar el manejador normal de cambio de pestaña
+    handleTabChange(event, newValue);
+  };
 
   const renderScheduleTable = () => {
     if (!isValid(endDate)) {
@@ -395,8 +416,8 @@ export default function ScheduleContent({
       <Box sx={{ maxWidth: "800px", width: "100%" }}>
         <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
           <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
+            value={activeTab > 1 ? 0 : activeTab} // Mantener la selección en pestañas existentes
+            onChange={handleTabChangeWithHistory}
             centered
           >
             <Tab label="Todos los turnos" />
@@ -420,6 +441,23 @@ export default function ScheduleContent({
                 </Box>
               }
             />
+            {isAdmin && (
+              <Tab
+                label={
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <HistoryIcon fontSize="small" />
+                    Historial
+                  </Box>
+                }
+              />
+            )}
           </Tabs>
         </Box>
         {renderScheduleTable()}

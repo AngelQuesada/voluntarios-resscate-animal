@@ -23,7 +23,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { formatDate } from '@/lib/utils';
 import { UserRoles, getRoleName } from '@/lib/constants';
 
@@ -57,21 +57,91 @@ function TabPanel(props: TabPanelProps) {
 interface UserDetailDialogProps {
   open: boolean;
   onClose: () => void;
-  user: any;
+  userId?: string;
+  user?: any;
 }
 
-const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user }) => {
+const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ 
+  open, 
+  onClose, 
+  userId, 
+  user: userProp 
+}) => {
+  const [userData, setUserData] = useState<any>(null);
   const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
+  // Efecto para cargar los datos del usuario si se proporciona un userId
+  useEffect(() => {
+    const fetchUserData = async () => {
+      // Obtener el ID del usuario independientemente de la forma en que se proporcionó
+      let userId: string | null = null;
+      
+      if (userProp && typeof userProp === 'object' && userProp.uid) {
+        userId = userProp.uid;
+        // Establecer datos provisionales mientras se carga la información completa
+        setUserData(userProp);
+      } else if (typeof userProp === 'string') {
+        userId = userProp;
+      } else if (typeof userId === 'string') {
+        userId = userId;
+      }
+      
+      if (!userId) {
+        console.error('No se proporcionó un ID de usuario válido');
+        return;
+      }
+      
+      setUserLoading(true);
+      try {
+        const userDocRef = doc(db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          setUserData({
+            uid: userId,
+            ...data
+          });
+        } else {
+          console.error('No se encontró el documento del usuario');
+          // Si no encontramos el documento pero tenemos datos parciales, mantenerlos
+          if (userProp && typeof userProp === 'object') {
+            setUserData({
+              uid: userId,
+              ...userProp
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error al obtener datos del usuario:', error);
+        // Si ocurre un error pero tenemos datos parciales, mantenerlos
+        if (userProp && typeof userProp === 'object') {
+          setUserData({
+            uid: userId,
+            ...userProp
+          });
+        }
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    if (open) {
+      fetchUserData();
+    }
+  }, [open, userId, userProp]);
+
+  // Efecto para cargar los turnos del usuario
   useEffect(() => {
     const fetchUserShifts = async () => {
-      if (!user?.uid) return;
+      if (!userData?.uid) return;
       
       setLoading(true);
       try {
@@ -89,7 +159,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
           // Si el documento tiene asignaciones, buscar al usuario actual
           if (data.assignments && Array.isArray(data.assignments)) {
             const userAssigned = data.assignments.some(
-              (assignment) => assignment.uid === user.uid
+              (assignment) => assignment.uid === userData.uid
             );
             
             // Si el usuario está asignado a este turno, agregar a la lista
@@ -120,12 +190,24 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
       }
     };
 
-    if (open && user) {
+    if (open && userData) {
       fetchUserShifts();
     }
-  }, [open, user]);
+  }, [open, userData]);
 
-  if (!user) return null;
+  if (userLoading) {
+    return (
+      <Dialog open={open} onClose={onClose}>
+        <DialogContent>
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (!userData) return null;
 
   // Separar turnos pendientes (futuros) y pasados
   const now = new Date();
@@ -212,36 +294,36 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
         {/* Información del usuario */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="body1"  gutterBottom>
-            {user.name} {user.lastname}
+            {userData.name} {userData.lastname}
           </Typography>
           
           <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
-            {Array.isArray(user.roles) 
-              ? user.roles.map(renderRole)
-              : user.role ? renderRole(user.role) : null}
+            {Array.isArray(userData.roles) 
+              ? userData.roles.map(renderRole)
+              : userData.role ? renderRole(userData.role) : null}
           </Box>
 
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="text.secondary">
-                Usuario: <strong>{user.username}</strong>
+                Usuario: <strong>{userData.username || 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Correo: <strong>{user.email}</strong>
+                Correo: <strong>{userData.email || 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Teléfono: <strong>{user.phone}</strong>
+                Teléfono: <strong>{userData.phone || 'No disponible'}</strong>
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="text.secondary">
-                Fecha de nacimiento: <strong>{user.birthdate ? formatDate(user.birthdate) : 'No disponible'}</strong>
+                Fecha de nacimiento: <strong>{userData.birthdate ? formatDate(userData.birthdate) : 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Profesión: <strong>{user.job || 'No disponible'}</strong>
+                Profesión: <strong>{userData.job || 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Localidad: <strong>{user.location || 'No disponible'}</strong>
+                Localidad: <strong>{userData.location || 'No disponible'}</strong>
               </Typography>
             </Grid>
           </Grid>

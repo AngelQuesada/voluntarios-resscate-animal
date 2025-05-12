@@ -12,6 +12,7 @@
     "test": "playwright test",
     "test:login": "playwright test tests/e2e/login.spec.ts",
     "test:role-assignment": "playwright test tests/e2e/role-assignment.spec.ts",
+    "test:admin-history": "playwright test tests/e2e/admin-history.spec.ts",
     "test:ui": "playwright test --ui"
   },
   "dependencies": {

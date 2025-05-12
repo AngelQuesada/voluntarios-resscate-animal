@@ -7,23 +7,24 @@ import {
   Paper, 
   CircularProgress,
   Tooltip,
-  useTheme
 } from '@mui/material';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import UserDetailDialog from '../admin/UserDetailDialog';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserRoles } from '@/lib/constants';
 import { useAuth } from '@/context/AuthContext';
+import { useGetUsersQuery } from '@/store/api/usersApi';
+import type { User } from '@/types/common';
 
 interface Volunteer {
   id: string;
   uid: string;
   name: string;
+  lastname: string; // Usando nombre y apellidos separados en lugar de fullName
   email: string;
   phone?: string;
-  photoURL?: string;
   roles?: number[];
   shift: 'M' | 'T';
 }
@@ -38,7 +39,14 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const { user } = useAuth();
-  const theme = useTheme();
+
+  // Obtener usuarios desde Redux
+  const { data: usersMap, isLoading: usersLoading, error: usersError } = useGetUsersQuery();
+
+  // Función para obtener los datos completos del usuario desde el Redux store
+  const getUserData = (uid: string): User | undefined => {
+    return usersMap ? usersMap[uid] : undefined;
+  };
 
   useEffect(() => {
     const fetchVolunteers = async () => {
@@ -61,89 +69,61 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
           // Determinar el tipo de turno (M o T)
           const shift = shiftData.shift || (docSnapshot.id.endsWith('_M') ? 'M' : 'T');
           
-          // Procesar asignaciones
+          // Función para procesar voluntarios por turno
+          const processVolunteers = (volunteersArray: any[], shiftType: 'M' | 'T') => {
+            if (!Array.isArray(volunteersArray)) return;
+            
+            for (const volunteerData of volunteersArray) {
+              if (!volunteerData.uid) continue;
+              
+              // Obtener datos completos del usuario desde Redux
+              const userData = getUserData(volunteerData.uid);
+              
+              // Si encontramos el usuario en Redux, usamos esos datos
+              if (userData) {
+                volunteersData.push({
+                  id: volunteerData.uid,
+                  uid: volunteerData.uid,
+                  name: userData.name,
+                  lastname: userData.lastname,
+                  email: userData.email || volunteerData.email || '',
+                  phone: userData.phone || volunteerData.phone || '',
+                  roles: userData.roles || volunteerData.roles || [],
+                  shift: shiftType
+                });
+              } else {
+                // Si no está en Redux, usamos los datos parciales que tenemos
+                volunteersData.push({
+                  id: volunteerData.uid,
+                  uid: volunteerData.uid,
+                  name: volunteerData.name,
+                  lastname: volunteerData.lastname || '',
+                  email: volunteerData.email || '',
+                  phone: volunteerData.phone || '',
+                  roles: volunteerData.roles || [],
+                  shift: shiftType
+                });
+              }
+            }
+          };
+          
+          // Procesar asignaciones generales (si existen)
           if (shiftData.assignments && Array.isArray(shiftData.assignments)) {
-            for (const volunteer of shiftData.assignments) {
-              if (volunteer.uid) {
-                // Obtener información adicional del usuario si está disponible
-                let userData = {
-                  roles: volunteer.roles || [],
-                  email: volunteer.email || '',
-                  phone: volunteer.phone || '',
-                  photoURL: volunteer.photoURL || ''
-                };
-                
-                // Si hay roles u otra información que falta, intentar obtenerla de Firestore
-                if (!userData.roles.length || !userData.email) {
-                  try {
-                    const userDocRef = doc(db, 'users', volunteer.uid);
-                    const userDocSnap = await getDoc(userDocRef);
-                    if (userDocSnap.exists()) {
-                      const userDocData = userDocSnap.data();
-                      userData = {
-                        ...userData,
-                        roles: userDocData.roles || [],
-                        email: userDocData.email || volunteer.email || '',
-                        phone: userDocData.phone || volunteer.phone || '',
-                        photoURL: userDocData.photoURL || volunteer.photoURL || ''
-                      };
-                    }
-                  } catch (error) {
-                    console.error("Error al obtener datos de usuario:", error);
-                  }
-                }
-                
-                volunteersData.push({
-                  id: volunteer.uid,
-                  uid: volunteer.uid,
-                  name: volunteer.name || 'Desconocido',
-                  email: userData.email,
-                  phone: userData.phone,
-                  photoURL: userData.photoURL,
-                  roles: userData.roles,
-                  shift
-                });
-              }
-            }
+            processVolunteers(shiftData.assignments, shift);
           }
           
-          // Si estamos almacenando separados por M y T
-          if (shift === 'M' && shiftData.M && Array.isArray(shiftData.M)) {
-            for (const volunteer of shiftData.M) {
-              if (volunteer.uid) {
-                volunteersData.push({
-                  id: volunteer.uid,
-                  uid: volunteer.uid,
-                  name: volunteer.name || 'Desconocido',
-                  email: volunteer.email || '',
-                  phone: volunteer.phone || '',
-                  photoURL: volunteer.photoURL || '',
-                  roles: volunteer.roles,
-                  shift: 'M'
-                });
-              }
-            }
+          // Procesar turno de mañana
+          if (shiftData.M && Array.isArray(shiftData.M)) {
+            processVolunteers(shiftData.M, 'M');
           }
           
-          if (shift === 'T' && shiftData.T && Array.isArray(shiftData.T)) {
-            for (const volunteer of shiftData.T) {
-              if (volunteer.uid) {
-                volunteersData.push({
-                  id: volunteer.uid,
-                  uid: volunteer.uid,
-                  name: volunteer.name || 'Desconocido',
-                  email: volunteer.email || '',
-                  phone: volunteer.phone || '',
-                  photoURL: volunteer.photoURL || '',
-                  roles: volunteer.roles,
-                  shift: 'T'
-                });
-              }
-            }
+          // Procesar turno de tarde
+          if (shiftData.T && Array.isArray(shiftData.T)) {
+            processVolunteers(shiftData.T, 'T');
           }
         }
         
-        // Filtrar posibles duplicados por ID
+        // Filtrar posibles duplicados por ID y turno
         const uniqueVolunteers = Array.from(
           new Map(volunteersData.map(v => [v.id + v.shift, v])).values()
         );
@@ -156,10 +136,11 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
       }
     };
 
-    if (selectedDate) {
+    // Solo cargamos los voluntarios si tenemos la fecha y los usuarios están cargados
+    if (selectedDate && (!usersLoading || usersMap)) {
       fetchVolunteers();
     }
-  }, [selectedDate]);
+  }, [selectedDate, usersMap, usersLoading]);
 
   const handleVolunteerClick = (volunteer: Volunteer) => {
     setSelectedVolunteer(volunteer);
@@ -178,10 +159,20 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
     return "primary.light";
   };
 
-  if (loading) {
+  // Mostrar loading si estamos cargando usuarios o voluntarios
+  if (usersLoading || loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
         <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Mostrar error si hay un problema con la carga de usuarios
+  if (usersError) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Typography color="error">Error al cargar los datos de usuarios</Typography>
       </Box>
     );
   }
@@ -212,9 +203,6 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
         {volunteersList.map((volunteer) => {
           const isCurrentUser = user?.uid === volunteer.uid;
           const roleColor = getRoleColor(volunteer.roles);
-          
-          // En la página de historial, todos los voluntarios son clicables
-          const canViewProfile = true;
 
           const Content = (
             <Box
@@ -241,7 +229,7 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
                   cursor: 'pointer',
                 }}
               >
-                {volunteer.name}
+                {`${volunteer.name} ${volunteer.lastname}`.trim()}
                 {isCurrentUser && " (Tú)"}
               </Typography>
             </Box>

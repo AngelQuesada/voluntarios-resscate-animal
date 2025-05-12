@@ -10,9 +10,12 @@
     "restart-project": "npx rimraf node_modules .next .cache package-lock.json && npm install && npm run dev",
     "create-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" ./scripts/create-users.ts",
     "test": "playwright test",
-    "test:login": "playwright test tests/e2e/login.spec.ts",
-    "test:role-assignment": "playwright test tests/e2e/role-assignment.spec.ts",
-    "test:admin-history": "playwright test tests/e2e/admin-history.spec.ts",
+    "test:sequential": "playwright test --workers=1",
+    "test:login": "playwright test --project=login-tests",
+    "test:roles": "playwright test --project=role-assignment-tests",
+    "test:history": "playwright test --project=history-view-tests",
+    "test:sequence": "playwright test --project=login-tests --project=role-assignment-tests --project=history-view-tests",
+    "test:all-sequential": "npm run test:login && npm run test:roles && npm run test:history",
     "test:ui": "playwright test --ui"
   },
   "dependencies": {

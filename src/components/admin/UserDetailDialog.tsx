@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -19,13 +19,14 @@ import {
   TableRow,
   Tabs,
   Tab,
+  Pagination,
+  Stack,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { formatDate } from '@/lib/utils';
 import { UserRoles, getRoleName } from '@/lib/constants';
+import { useUserDetailDialog } from '@/hooks/use-user-detail-dialog';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -67,133 +68,28 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
   userId, 
   user: userProp 
 }) => {
-  const [userData, setUserData] = useState<any>(null);
-  const [shifts, setShifts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userLoading, setUserLoading] = useState(false);
-  const [tabValue, setTabValue] = useState(0);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  // Efecto para cargar los datos del usuario si se proporciona un userId
-  useEffect(() => {
-    const fetchUserData = async () => {
-      // Obtener el ID del usuario independientemente de la forma en que se proporcionó
-      let userId: string | null = null;
-      
-      if (userProp && typeof userProp === 'object' && userProp.uid) {
-        userId = userProp.uid;
-        // Establecer datos provisionales mientras se carga la información completa
-        setUserData(userProp);
-      } else if (typeof userProp === 'string') {
-        userId = userProp;
-      } else if (typeof userId === 'string') {
-        userId = userId;
-      }
-      
-      if (!userId) {
-        console.error('No se proporcionó un ID de usuario válido');
-        return;
-      }
-      
-      setUserLoading(true);
-      try {
-        const userDocRef = doc(db, 'users', userId);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (userDocSnap.exists()) {
-          const data = userDocSnap.data();
-          setUserData({
-            uid: userId,
-            ...data
-          });
-        } else {
-          console.error('No se encontró el documento del usuario');
-          // Si no encontramos el documento pero tenemos datos parciales, mantenerlos
-          if (userProp && typeof userProp === 'object') {
-            setUserData({
-              uid: userId,
-              ...userProp
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error al obtener datos del usuario:', error);
-        // Si ocurre un error pero tenemos datos parciales, mantenerlos
-        if (userProp && typeof userProp === 'object') {
-          setUserData({
-            uid: userId,
-            ...userProp
-          });
-        }
-      } finally {
-        setUserLoading(false);
-      }
-    };
-
-    if (open) {
-      fetchUserData();
-    }
-  }, [open, userId, userProp]);
-
-  // Efecto para cargar los turnos del usuario
-  useEffect(() => {
-    const fetchUserShifts = async () => {
-      if (!userData?.uid) return;
-      
-      setLoading(true);
-      try {
-        // Los turnos en Firestore están almacenados con ID en formato "YYYY-MM-DD_M" o "YYYY-MM-DD_T"
-        // donde M es mañana y T es tarde
-        const shiftsRef = collection(db, 'shifts');
-        const shiftsSnapshot = await getDocs(shiftsRef);
-        
-        // Procesar los resultados para encontrar los turnos donde está asignado el usuario
-        const shiftsData = [];
-        
-        for (const shiftDoc of shiftsSnapshot.docs) {
-          const data = shiftDoc.data();
-          
-          // Si el documento tiene asignaciones, buscar al usuario actual
-          if (data.assignments && Array.isArray(data.assignments)) {
-            const userAssigned = data.assignments.some(
-              (assignment) => assignment.uid === userData.uid
-            );
-            
-            // Si el usuario está asignado a este turno, agregar a la lista
-            if (userAssigned) {
-              // El ID del documento tiene el formato "YYYY-MM-DD_M" o "YYYY-MM-DD_T"
-              const [dateStr, shiftType] = shiftDoc.id.split('_');
-              
-              shiftsData.push({
-                id: shiftDoc.id,
-                date: dateStr,
-                startTime: shiftType === 'M' ? '09:00' : '16:00',
-                endTime: shiftType === 'M' ? '13:00' : '20:00',
-                area: shiftType === 'M' ? 'Mañana' : 'Tarde',
-                assignments: data.assignments,
-              });
-            }
-          }
-        }
-        
-        // Ordenar los turnos por fecha (más recientes primero)
-        shiftsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        
-        setShifts(shiftsData);
-      } catch (error) {
-        console.error('Error fetching user shifts:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (open && userData) {
-      fetchUserShifts();
-    }
-  }, [open, userData]);
+  const {
+    userData,
+    loading,
+    userLoading,
+    tabValue,
+    handleTabChange,
+    upcomingShiftsCount,
+    pastShiftsCount,
+    paginatedUpcomingShifts,
+    paginatedPastShifts,
+    upcomingPage,
+    pastPage,
+    totalUpcomingPages,
+    totalPastPages,
+    handleUpcomingPageChange,
+    handlePastPageChange,
+  } = useUserDetailDialog({
+    open,
+    userId,
+    user: userProp,
+    shiftsPerPage: 15
+  });
 
   if (userLoading) {
     return (
@@ -209,19 +105,6 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
 
   if (!userData) return null;
 
-  // Separar turnos pendientes (futuros) y pasados
-  const now = new Date();
-  const upcomingShifts = shifts.filter(shift => {
-    const shiftDate = new Date(shift.date);
-    return shiftDate >= now;
-  });
-  
-  const pastShifts = shifts.filter(shift => {
-    const shiftDate = new Date(shift.date);
-    return shiftDate < now;
-  });
-
-  // Función para renderizar un rol
   const renderRole = (roleId: number) => {
     let color = 'primary';
     if (roleId === UserRoles.ADMINISTRADOR) {
@@ -241,8 +124,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
     );
   };
 
-  // Función para renderizar la tabla de turnos
-  const renderShiftsTable = (shiftsData: any[]) => {
+  const renderShiftsTable = (shiftsData: any[], currentPage: number, totalPages: number, handlePageChange: (event: React.ChangeEvent<unknown>, value: number) => void) => {
     if (shiftsData.length === 0) {
       return (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 2 }}>
@@ -252,26 +134,41 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
     }
 
     return (
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Fecha</TableCell>
-              <TableCell>Turno</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {shiftsData.map((shift) => (
-              <TableRow key={shift.id}>
-                <TableCell>{formatDate(shift.date)}</TableCell>
-                <TableCell>
-                  {shift.area}
-                </TableCell>
+      <>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Fecha</TableCell>
+                <TableCell>Turno</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {shiftsData.map((shift) => (
+                <TableRow key={shift.id}>
+                  <TableCell>{formatDate(shift.date)}</TableCell>
+                  <TableCell>
+                    {shift.area}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        {/* Control de paginación */}
+        {totalPages > 1 && (
+          <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+            <Pagination 
+              count={totalPages} 
+              page={currentPage} 
+              onChange={handlePageChange} 
+              color="primary" 
+              size="small"
+            />
+          </Stack>
+        )}
+      </>
     );
   };
 
@@ -343,8 +240,8 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
           indicatorColor="primary"
           textColor="primary"
         >
-          <Tab label={`Turnos Pendientes (${upcomingShifts.length})`} />
-          <Tab label={`Turnos Pasados (${pastShifts.length})`} />
+          <Tab label={`Turnos Pendientes (${upcomingShiftsCount})`} />
+          <Tab label={`Turnos Pasados (${pastShiftsCount})`} />
         </Tabs>
 
         {loading ? (
@@ -354,10 +251,10 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
         ) : (
           <>
             <TabPanel value={tabValue} index={0}>
-              {renderShiftsTable(upcomingShifts)}
+              {renderShiftsTable(paginatedUpcomingShifts, upcomingPage, totalUpcomingPages, handleUpcomingPageChange)}
             </TabPanel>
             <TabPanel value={tabValue} index={1}>
-              {renderShiftsTable(pastShifts)}
+              {renderShiftsTable(paginatedPastShifts, pastPage, totalPastPages, handlePastPageChange)}
             </TabPanel>
           </>
         )}

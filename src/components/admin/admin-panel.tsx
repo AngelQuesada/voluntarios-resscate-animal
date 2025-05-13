@@ -30,6 +30,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import ContactPhoneIcon from "@mui/icons-material/ContactPhone";
 import HistoryIcon from "@mui/icons-material/History";
 import PeopleIcon from "@mui/icons-material/People";
+import DateRangeIcon from '@mui/icons-material/DateRange';
 import { useAdminPanel } from "@/hooks/use-admin-panel";
 import NotificationSnackbar from "../schedule/NotificationSnackbar";
 import { UserRoles, getRoleName } from "@/lib/constants";
@@ -38,6 +39,8 @@ import UserDetailDialog from "./UserDetailDialog";
 import ContactDialog from "../schedule/ContactDialog";
 import UserForm from "./UserForm";
 import SearchInput from "./SearchInput";
+import WeekViewPanel from "./WeekViewPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Importar el componente de historial lazy
 const HistoryCalendar = lazy(() => import('../history/HistoryCalendar'));
@@ -70,6 +73,7 @@ function TabPanel(props: TabPanelProps) {
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState(0);
+  const isMobile = useIsMobile();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -142,25 +146,36 @@ export function AdminPanel() {
       <Box
         sx={{
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
+          alignItems: isMobile ? "flex-start" : "center",
+          flexWrap: isMobile ? "nowrap" : "wrap",
           gap: 1,
           mb: 2
         }}
       >
+        {isMobile && (
+          <FormControlLabel
+            control={<Switch checked={prioritizeResponsables} onChange={handlePrioritizeResponsablesChange} />}
+            label="Solo Responsables"
+            sx={{ mb: 1 }}
+          />
+        )}
         <SearchInput 
           searchTerm={searchTerm}
-          showSearchInput={showSearchInput}
+          showSearchInput={isMobile ? true : showSearchInput}
           handleSearchChange={handleSearchChange}
           handleSearchIconClick={handleSearchIconClick}
-          handleClickAwaySearch={handleClickAwaySearch}
+          handleClickAwaySearch={isMobile ? undefined : handleClickAwaySearch}
+          isMobile={isMobile}
         />
-        <FormControlLabel
-          control={<Switch checked={prioritizeResponsables} onChange={handlePrioritizeResponsablesChange} />}
-          label="Priorizar Responsables"
-          sx={{ ml: 1 }}
-        />
+        {!isMobile && (
+          <FormControlLabel
+            control={<Switch checked={prioritizeResponsables} onChange={handlePrioritizeResponsablesChange} />}
+            label="Solo Responsables"
+            sx={{ ml: 1 }}
+          />
+        )}
       </Box>
 
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
@@ -360,6 +375,13 @@ export function AdminPanel() {
               id="tab-1"
               aria-controls="tabpanel-1"
             />
+            <Tab 
+              icon={<DateRangeIcon />} 
+              label="Semana" 
+              iconPosition="start"
+              id="tab-2"
+              aria-controls="tabpanel-2"
+            />
           </Tabs>
 
           {/* Contenido de las pestañas */}
@@ -374,6 +396,16 @@ export function AdminPanel() {
               </Box>
             }>
               {activeTab === 1 && <HistoryCalendar />}
+            </Suspense>
+          </TabPanel>
+
+          <TabPanel value={activeTab} index={2}>
+            <Suspense fallback={
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+              </Box>
+            }>
+              {activeTab === 2 && <WeekViewPanel onUserClick={handleOpenUserDetailDialog} />}
             </Suspense>
           </TabPanel>
         </Box>

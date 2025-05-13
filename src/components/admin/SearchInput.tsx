@@ -7,7 +7,8 @@ interface SearchInputProps {
   showSearchInput: boolean;
   handleSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSearchIconClick: () => void;
-  handleClickAwaySearch: () => void;
+  handleClickAwaySearch?: () => void;
+  isMobile?: boolean;
 }
 
 const SearchInput: React.FC<SearchInputProps> = ({
@@ -15,10 +16,35 @@ const SearchInput: React.FC<SearchInputProps> = ({
   showSearchInput,
   handleSearchChange,
   handleSearchIconClick,
-  handleClickAwaySearch
+  handleClickAwaySearch,
+  isMobile = false
 }) => {
+  // En dispositivos móviles, no usamos el ClickAwayListener
+  if (isMobile) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, width: '100%' }}>
+        <TextField
+          label="Buscar Usuario"
+          variant="outlined"
+          fullWidth
+          value={searchTerm}
+          onChange={handleSearchChange}
+          InputProps={{
+            endAdornment: (
+              <IconButton>
+                <SearchIcon />
+              </IconButton>
+            ),
+          }}
+          sx={{ mr: 0 }}
+        />
+      </Box>
+    );
+  }
+
+  // Versión desktop original con ClickAwayListener
   return (
-    <ClickAwayListener onClickAway={handleClickAwaySearch}>
+    <ClickAwayListener onClickAway={handleClickAwaySearch || (() => {})}>
       <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, minWidth: '200px' }}>
         {showSearchInput ? (
           <TextField
@@ -29,7 +55,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
             onChange={handleSearchChange}
             autoFocus
             onKeyDown={(e) => {
-              if (e.key === 'Escape') {
+              if (e.key === 'Escape' && handleClickAwaySearch) {
                 handleClickAwaySearch();
               }
             }}

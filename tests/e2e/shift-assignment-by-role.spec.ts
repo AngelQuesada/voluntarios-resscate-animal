@@ -34,7 +34,7 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
       }
     }
     
-    // Buscar botones para añadir turno
+    // Buscar botones para añadir turno para uno mismo
     const addButtons = await page.$$('button:has(svg[data-testid="PersonAddIcon"])');
     
     if (addButtons.length > 0) {
@@ -83,6 +83,35 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
           // Verificar que ya no aparece el nombre del usuario en la misma fila
           await expect(page.locator(`${rowSelector} >> text=Administrador Test`)).not.toBeVisible({ timeout: 5000 });
         }
+      }
+    } else {
+      // Caso especial: si no hay botones de asignación visibles, buscar un turno vacío
+      // y verificar si podemos encontrar un botón de añadir usuario en el DOM
+
+      // Buscar filas de turno que contengan "Nadie asignado"
+      const emptyShiftRows = await page.$$('tr:has-text("Nadie asignado")');
+      
+      if (emptyShiftRows.length > 0) {
+        // Tomar la primera fila vacía
+        const emptyRow = emptyShiftRows[0];
+        
+        // Hacer click en el área del turno para activar posibles controles
+        await emptyRow.click();
+        
+        // Esperar brevemente
+        await page.waitForTimeout(500);
+        
+        // Buscar texto que indique el tipo de turno (Mañana o Tarde) dentro de la fila
+        const shiftTypeText = await emptyRow.$eval('td:first-child', (td) => td.textContent);
+        console.log(`Turno vacío encontrado: ${shiftTypeText}`);
+        
+        // Verificar que esta prueba reconoce la limitación actual
+        console.log('AVISO: En la implementación actual, los administradores no pueden añadir usuarios directamente a turnos vacíos.');
+        
+        // Esta parte debería pasar cuando se implemente la funcionalidad
+        test.fail(true, 'Los administradores deberían poder añadir usuarios a turnos vacíos, pero esta funcionalidad no está implementada');
+      } else {
+        console.log('No se encontraron turnos vacíos para probar.');
       }
     }
   });

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "restart-project": "npx rimraf node_modules .next .cache package-lock.json && npm install && npm run dev",
-    "create-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" ./scripts/create-users.ts",
+    "import-mock-users": "node scripts/create_users.js",
     "test": "playwright test",
     "test:sequential": "playwright test --workers=1",
     "test:login": "playwright test --project=login-tests",

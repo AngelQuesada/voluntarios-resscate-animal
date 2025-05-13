@@ -488,11 +488,43 @@ export function useScheduleContent({
 
     const assignmentsList = assignmentsToRender ?? [];
 
+    // Componente del botón de añadir usuario
+    const AddUserButton = () => isAdmin ? (
+      <Tooltip title="Añadir usuario a este turno" arrow>
+        <Box
+          onClick={() => handleAddUserButtonClick(dayKey, shiftKey)}
+          sx={{
+            borderRadius: "8px",
+            padding: "4px 8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "grey.300",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            minHeight: '24px',
+            minWidth: '24px',
+            "&:hover": {
+              backgroundColor: "grey.400",
+              filter: "brightness(0.95)",
+            },
+          }}
+        >
+          <PersonAddIcon sx={{ color: "text.primary", fontSize: "1rem" }} />
+        </Box>
+      </Tooltip>
+    ) : null;
+
     if (assignmentsList.length === 0) {
       return (
-        <Typography variant="body2" color="text.secondary">
-          Nadie asignado
-        </Typography>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Nadie asignado
+            </Typography>
+            {isAdmin && <AddUserButton />}
+          </Box>
+        </Box>
       );
     }
   
@@ -614,38 +646,8 @@ export function useScheduleContent({
             );
           })}
 
-          {isAdmin && (
-            <Tooltip title="Añadir usuario a este turno" arrow>
-              <Box
-                onClick={() => handleAddUserButtonClick(dayKey, shiftKey)}
-                sx={{
-                  borderRadius: "8px",
-                  padding: "4px 8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "grey.300",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  minHeight: '24px',
-                  minWidth: '24px',
-                  "&:hover": {
-                    backgroundColor: "grey.400",
-                    filter: "brightness(0.95)",
-                  },
-                }}
-              >
-                <PersonAddIcon sx={{ color: "text.primary", fontSize: "1rem" }} />
-              </Box>
-            </Tooltip>
-          )}
+          {isAdmin && <AddUserButton />}
         </Box>
-
-        {assignmentsList.length === 0 && isAdmin && (
-           <Typography variant="body2" color="text.secondary" sx={{marginTop: '8px'}}>
-             No hay nadie en este turno. Haz clic en el icono (+) para asignar.
-           </Typography>
-        )}
       </Box>
     );
   };

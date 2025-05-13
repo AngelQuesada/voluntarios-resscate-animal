@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { User } from '../types/common';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, deleteDoc, getDocs, collection, updateDoc } from 'firebase/firestore';
@@ -79,6 +79,7 @@ export const useAdminPanel = () => {
   const [rowsPerPage, setRowsPerPage] = useState(12);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
+  const [prioritizeResponsables, setPrioritizeResponsables] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -101,6 +102,10 @@ export const useAdminPanel = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const handlePrioritizeResponsablesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPrioritizeResponsables(event.target.checked);
+  };
 
   const handleInputChange = (
     e:
@@ -376,9 +381,50 @@ export const useAdminPanel = () => {
     setPage(0);
   };
 
-  const filteredUsers = users.filter(user =>
-    `${user.name} ${user.lastname} ${user.username}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getRoleName = (level: number): string => {
+    const roleMap: { [key: number]: string } = {
+      [UserRoles.VOLUNTARIO]: 'Voluntario',
+      [UserRoles.RESPONSABLE]: 'Responsable',
+      [UserRoles.ADMINISTRADOR]: 'Administrador',
+    };
+    return roleMap[level] || 'Desconocido';
+  };
+
+  const filteredUsers = useMemo(() => {
+    let usersToProcess = [...users];
+
+    // Primero, filtrar por el término de búsqueda
+    let searchedUsers = usersToProcess.filter(user =>
+      `${user.name} ${user.lastname} ${user.username} ${user.email || ''} ${(Array.isArray(user.roles) ? user.roles.map(r => getRoleName(r)).join(' ') : getRoleName(user.roles || UserRoles.VOLUNTARIO))}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+    );
+
+    // Luego, ordenar según los criterios:
+    // 1. Priorizar Responsables (si está activo)
+    // 2. Estado de habilitación (habilitados primero)
+    // 3. Nombre completo
+    searchedUsers.sort((a, b) => {
+      // Priorizar Responsables
+      if (prioritizeResponsables) {
+        const aIsResponsable = Array.isArray(a.roles) ? a.roles.includes(UserRoles.RESPONSABLE) : a.roles === UserRoles.RESPONSABLE;
+        const bIsResponsable = Array.isArray(b.roles) ? b.roles.includes(UserRoles.RESPONSABLE) : b.roles === UserRoles.RESPONSABLE;
+        if (aIsResponsable && !bIsResponsable) return -1;
+        if (!aIsResponsable && bIsResponsable) return 1;
+      }
+
+      // Ordenar por isEnabled (true primero)
+      const aIsEnabled = a.isEnabled !== false;
+      const bIsEnabled = b.isEnabled !== false;
+      if (aIsEnabled && !bIsEnabled) return -1;
+      if (!aIsEnabled && bIsEnabled) return 1;
+
+      // Finalmente, ordenar por nombre completo
+      return `${a.name} ${a.lastname}`.localeCompare(`${b.name} ${b.lastname}`);
+    });
+
+    return searchedUsers;
+  }, [users, searchTerm, prioritizeResponsables]);
 
   return {
     users,
@@ -431,6 +477,8 @@ export const useAdminPanel = () => {
     handleCloseUserDetailDialog,
     handleSearchChange,
     filteredUsers,
+    prioritizeResponsables,
+    handlePrioritizeResponsablesChange,
     handleEnabledSwitchChange,
     handleEditEnabledSwitchChange,
   };

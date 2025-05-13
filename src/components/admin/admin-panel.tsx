@@ -18,7 +18,9 @@ import {
   TablePagination,
   Tabs,
   Tab,
-  CircularProgress
+  CircularProgress,
+  Switch,
+  FormControlLabel
 } from "@mui/material";
 import { Header } from "@/components/schedule/header";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -115,20 +117,27 @@ export function AdminPanel() {
     handleCloseUserDetailDialog,
     handleSearchChange,
     filteredUsers,
+    prioritizeResponsables,
+    handlePrioritizeResponsablesChange,
     handleEnabledSwitchChange,
     handleEditEnabledSwitchChange,
   } = useAdminPanel();
 
-  const sortedFilteredUsers = React.useMemo(() => {
-    return filteredUsers.sort((a, b) => {
-      if (a.isEnabled !== false && b.isEnabled === false) return -1;
-      if (a.isEnabled === false && b.isEnabled !== false) return 1;
-      return `${a.name} ${a.lastname}`.localeCompare(`${b.name} ${b.lastname}`);
-    });
-  }, [filteredUsers]);
 
   const UsersTable = () => (
     <>
+      {/* Fila para el botón Añadir Usuario */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setIsAddDialogOpen(true)}
+        >
+          Añadir Usuario
+        </Button>
+      </Box>
+
+      {/* Fila para la búsqueda y el interruptor de priorizar responsables */}
       <Box
         sx={{
           display: "flex",
@@ -146,14 +155,11 @@ export function AdminPanel() {
           handleSearchIconClick={handleSearchIconClick}
           handleClickAwaySearch={handleClickAwaySearch}
         />
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setIsAddDialogOpen(true)}
-          sx={{ flexShrink: 0 }}
-        >
-          Añadir Usuario
-        </Button>
+        <FormControlLabel
+          control={<Switch checked={prioritizeResponsables} onChange={handlePrioritizeResponsablesChange} />}
+          label="Priorizar Responsables"
+          sx={{ ml: 1 }}
+        />
       </Box>
 
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
@@ -211,7 +217,7 @@ export function AdminPanel() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedFilteredUsers
+                filteredUsers
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((user) => (
                     <TableRow

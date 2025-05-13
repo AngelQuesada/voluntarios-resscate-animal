@@ -32,6 +32,7 @@ interface NewUserInfoState {
 }
 
 export const useAdminPanel = () => {
+  const [isAddingUser, setIsAddingUser] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -138,6 +139,7 @@ export const useAdminPanel = () => {
   };
 
   const handleAddUser = async () => {
+    setIsAddingUser(true);
     setFormError(null);
     if (
       !newUserInfo.username ||
@@ -227,6 +229,8 @@ export const useAdminPanel = () => {
       } else {
         setFormError('Error al crear el usuario. Verifica la consola.');
       }
+    } finally {
+      setIsAddingUser(false);
     }
   };
 
@@ -481,5 +485,6 @@ export const useAdminPanel = () => {
     handlePrioritizeResponsablesChange,
     handleEnabledSwitchChange,
     handleEditEnabledSwitchChange,
+    isAddingUser,
   };
 };

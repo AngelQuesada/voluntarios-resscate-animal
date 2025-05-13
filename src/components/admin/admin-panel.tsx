@@ -20,7 +20,8 @@ import {
   Tab,
   CircularProgress,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Backdrop
 } from "@mui/material";
 import { Header } from "@/components/schedule/header";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -38,10 +39,9 @@ import ContactDialog from "../schedule/ContactDialog";
 import UserForm from "./UserForm";
 import SearchInput from "./SearchInput";
 
-// Importar el componente de historial de forma perezosa
+// Importar el componente de historial lazy
 const HistoryCalendar = lazy(() => import('../history/HistoryCalendar'));
 
-// Componente TabPanel para mostrar el contenido de cada pestaña
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -88,6 +88,7 @@ export function AdminPanel() {
     deleteError,
     isDeleteDialogOpen,
     isEditDialogOpen,
+    isAddingUser,
     setIsEditDialogOpen,
     editUserInfo,
     setEditUserInfo,
@@ -133,7 +134,7 @@ export function AdminPanel() {
           startIcon={<AddIcon />}
           onClick={() => setIsAddDialogOpen(true)}
         >
-          Añadir Usuario
+          Añadir Voluntario
         </Button>
       </Box>
 
@@ -412,29 +413,34 @@ export function AdminPanel() {
         />
 
         <DialogComponent
-          open={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
-          title="Editar Usuario"
-          content={
-            <UserForm
-              userData={editUserInfo}
-              handleChange={handleEditInputChange}
-              setUserData={setEditUserInfo}
-              isAddMode={false}
-              handleEnabledSwitchChange={handleEditEnabledSwitchChange}
-            />
-          }
-          error={formError}
-          actions={[
-            { label: "Cancelar", onClick: () => setIsEditDialogOpen(false) },
-            {
-              label: "Guardar Cambios",
-              onClick: handleEditUser,
-              variant: "contained",
-              color: "primary"
-            }
-          ]}
-        />
+                  open={isEditDialogOpen}
+                  onClose={() => setIsEditDialogOpen(false)}
+                  title="Editar Usuario"
+                  content={
+                    <UserForm
+                      userData={editUserInfo}
+                      handleChange={handleEditInputChange}
+                      setUserData={setEditUserInfo}
+                      isAddMode={false}
+                      handleEnabledSwitchChange={handleEditEnabledSwitchChange}
+                    />
+                  }
+                  error={formError}
+                  actions={[
+                    { 
+                      label: "Cancelar", 
+                      onClick: () => setIsEditDialogOpen(false),
+                      disabled: isAddingUser
+                    },
+                    {
+                      label: "Guardar Cambios",
+                      onClick: handleEditUser,
+                      variant: "contained",
+                      color: "primary",
+                      disabled: isAddingUser
+                    }
+                  ]}
+                />
 
         <DialogComponent
           open={isDeleteDialogOpen}
@@ -465,6 +471,14 @@ export function AdminPanel() {
           onClose={handleCloseUserDetailDialog}
           user={detailUser}
         />
+
+        <Backdrop
+          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+          open={isAddingUser}
+        >
+          <CircularProgress color="inherit" />
+        </Backdrop>
+
       </Container>
     </>
   );

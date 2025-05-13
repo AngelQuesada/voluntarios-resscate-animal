@@ -22,6 +22,7 @@ interface DialogComponentProps {
     color?: "inherit" | "primary" | "secondary" | "success" | "error" | "info" | "warning";
     variant?: "text" | "outlined" | "contained";
     autoFocus?: boolean;
+    disabled?: boolean;
   }[];
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
   fullWidth?: boolean;

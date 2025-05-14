@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -10,9 +10,9 @@ import {
   Paper,
   CircularProgress,
   Divider,
-  Chip,
   Alert,
-  Button // Añadir Button
+  Button,
+  LinearProgress
 } from '@mui/material';
 import { 
   startOfWeek, 
@@ -23,11 +23,10 @@ import {
   parseISO 
 } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useGetUsersQuery } from '@/store/api/usersApi'; // Corregido
-import { useGetShiftsQuery } from '@/store/api/shiftsApi'; // Corregido
-import { User } from '@/types/common'; // Corregido para ser más específico
+import { useGetUsersQuery } from '@/store/api/usersApi';
+import { useGetShiftsQuery } from '@/store/api/shiftsApi';
+import { User } from '@/types/common';
 import { ShiftAssignment } from '@/store/api/shiftsApi';
-import { UserRoles } from '@/lib/constants'; // Añadido para filtrar roles
 
 interface WeekViewPanelProps {
   onUserClick: (user: User) => void;
@@ -42,13 +41,27 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
   const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
   const nextWeekEnd = endOfWeek(nextWeekStart, { weekStartsOn: 1 });
 
+  // Formato personalizado para mostrar el rango de fechas
+  const formatWeekRange = (start: Date, end: Date) => {
+    const startMonth = format(start, 'MMMM', { locale: es });
+    const endMonth = format(end, 'MMMM', { locale: es });
+    
+    // Si los meses son diferentes
+    if (startMonth !== endMonth) {
+      return `${format(start, 'd', { locale: es })} de ${startMonth} al ${format(end, 'd', { locale: es })} de ${endMonth}`;
+    }
+    // Si los meses son iguales
+    return `${format(start, 'd', { locale: es })} al ${format(end, 'd', { locale: es })} de ${startMonth}`;
+  };
+
+  // Texto para la semana actual y siguiente
+  const currentWeekText = `Semana actual: ${formatWeekRange(currentWeekStart, currentWeekEnd)}`;
+  const nextWeekText = `Semana siguiente: ${formatWeekRange(nextWeekStart, nextWeekEnd)}`;
+
   const { data: usersData, isLoading: usersLoading, error: usersError } = useGetUsersQuery();
   const { data: shiftsData, isLoading: shiftsLoading, error: shiftsError } = useGetShiftsQuery({
     startDate: format(currentWeekStart, 'yyyy-MM-dd'),
     endDate: format(nextWeekEnd, 'yyyy-MM-dd'),
-    // Pasamos un objeto vacío para users si no queremos filtrar por usuario específico aquí,
-    // o si la API no lo requiere para obtener todos los turnos en el rango.
-    // La API de turnos actual parece procesar los usuarios internamente.
     users: {}
   });
 
@@ -92,6 +105,15 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
     [enabledVolunteers, shiftsData, nextWeekStart, nextWeekEnd]
   );
 
+  // Calcular voluntarios con turnos asignados y los valores de progreso
+  const totalVolunteers = enabledVolunteers.length;
+  const volunteersWithShiftsCurrentWeek = totalVolunteers - volunteersWithoutShiftsCurrentWeek.length;
+  const volunteersWithShiftsNextWeek = totalVolunteers - volunteersWithoutShiftsNextWeek.length;
+  
+  // Calcular porcentajes para las barras de progreso
+  const currentWeekProgress = totalVolunteers > 0 ? (volunteersWithShiftsCurrentWeek / totalVolunteers) * 100 : 0;
+  const nextWeekProgress = totalVolunteers > 0 ? (volunteersWithShiftsNextWeek / totalVolunteers) * 100 : 0;
+
   if (usersLoading || shiftsLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
@@ -111,14 +133,6 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
     }
 
     const volunteersToShow = showAll ? volunteers : volunteers.slice(0, 10);
-
-    if (!volunteersToShow.length) {
-      return <Typography sx={{p:2, fontStyle: 'italic'}}>No hay voluntarios sin turnos asignados para {weekType}.</Typography>;
-    }
-
-    if (!volunteersToShow.length) {
-      return <Typography sx={{p:2, fontStyle: 'italic'}}>No hay voluntarios sin turnos asignados para {weekType}.</Typography>;
-    }
 
     if (!volunteersToShow.length) {
       return <Typography sx={{p:2, fontStyle: 'italic'}}>No hay voluntarios sin turnos asignados para {weekType}.</Typography>;
@@ -149,17 +163,80 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
     );
   };
 
+  // Componente para la barra de progreso con texto
+  const ProgressBarWithLabel = ({ value, label, isCurrentWeek, weekTitle }: { value: number, label: string, isCurrentWeek: boolean, weekTitle: string }) => (
+    <Box sx={{ mb: 2 }}>
+      <Typography 
+        variant="h6" 
+        component="div"
+        sx={{
+          mb: 2,
+          py: 1,
+          px: 2,
+          fontWeight: 'bold',
+          color: '#FFFFFF',
+          borderColor: isCurrentWeek ? 'primary.dark' : 'primary.main',
+          backgroundColor: isCurrentWeek ? 'primary.main' : 'primary.light',
+          borderRadius: '4px 4px 0 0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {weekTitle}
+      </Typography>
+
+      <Box sx={{ position: 'relative', display: 'inline-flex', width: '100%' }}>
+        <LinearProgress 
+          variant="determinate" 
+          value={value} 
+          sx={{ 
+            width: '100%', 
+            height: 30, 
+            borderRadius: 1,
+            backgroundColor: isCurrentWeek ? 'rgba(7, 94, 28, 0.1)' : 'rgba(54, 137, 74, 0.1)',
+            '& .MuiLinearProgress-bar': {
+              backgroundColor: isCurrentWeek ? 'primary.main' : 'primary.light',
+              transition: 'transform 0.4s ease'
+            }
+          }} 
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <Typography 
+            variant="body1" 
+            component="div" 
+            color="text.primary"
+            sx={{ 
+              fontWeight: 'bold',
+              textShadow: '0px 0px 3px rgba(255, 255, 255, 0.8)'
+            }}
+          >
+            {label}
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
       <Paper elevation={3} sx={{ flex: 1, p: 2 }}>
-        <Typography variant="h6" gutterBottom component="div">
-          Semana Actual
-        </Typography>
-        <Chip 
-          label={`Del ${format(currentWeekStart, 'dd MMM yyyy', { locale: es })} al ${format(currentWeekEnd, 'dd MMM yyyy', { locale: es })}`}
-          color="primary"
-          sx={{ mb: 2 }}
+        <ProgressBarWithLabel 
+          value={currentWeekProgress} 
+          label={`${volunteersWithShiftsCurrentWeek}/${totalVolunteers} voluntarios`}
+          isCurrentWeek={true}
+          weekTitle={currentWeekText}
         />
+        
         <Typography variant="subtitle1" sx={{mb:1}}>Voluntarios sin turnos asignados:</Typography>
         {renderVolunteerList(volunteersWithoutShiftsCurrentWeek, 'la semana actual', showAllCurrentWeek, () => setShowAllCurrentWeek(true))}
       </Paper>
@@ -168,14 +245,13 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
       <Divider sx={{ display: { xs: 'block', md: 'none' }, my: 2 }} />
 
       <Paper elevation={3} sx={{ flex: 1, p: 2 }}>
-        <Typography variant="h6" gutterBottom component="div">
-          Semana Siguiente
-        </Typography>
-        <Chip 
-          label={`Del ${format(nextWeekStart, 'dd MMM yyyy', { locale: es })} al ${format(nextWeekEnd, 'dd MMM yyyy', { locale: es })}`}
-          color="secondary"
-          sx={{ mb: 2 }}
+        <ProgressBarWithLabel 
+          value={nextWeekProgress} 
+          label={`${volunteersWithShiftsNextWeek}/${totalVolunteers} voluntarios`}
+          isCurrentWeek={false}
+          weekTitle={nextWeekText}
         />
+        
         <Typography variant="subtitle1" sx={{mb:1}}>Voluntarios sin turnos asignados:</Typography>
         {renderVolunteerList(volunteersWithoutShiftsNextWeek, 'la semana siguiente', showAllNextWeek, () => setShowAllNextWeek(true))}
       </Paper>

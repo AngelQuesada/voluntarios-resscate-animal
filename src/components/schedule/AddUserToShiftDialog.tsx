@@ -34,7 +34,8 @@ const AddUserToShiftDialog: React.FC<AddUserToShiftDialogProps> = ({
     .filter(user => 
       !alreadyAssignedIds.has(user.id) &&
       (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastname?.toLowerCase().includes(searchTerm.toLowerCase()))
+      user.lastname?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      user.isEnabled !== false
     )
     .sort((a, b) => {
       const getHighestRole = (user: User) => {

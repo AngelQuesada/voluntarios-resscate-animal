@@ -171,7 +171,7 @@ export default function ScheduleContent({
                                 today.setHours(0, 0, 0, 0);
                                 const shiftDate = new Date(dateKey);
                                 const daysDifference = Math.floor(
-                                  (shiftDate.getTime() - today.getTime()) /
+                                  (shiftDate.getTime() - today.getTime()) / 
                                   (1000 * 60 * 60 * 24)
                                 );
                                 const isWithinNextThreeDays =
@@ -244,7 +244,7 @@ export default function ScheduleContent({
                     today.setHours(0, 0, 0, 0);
                     const shiftDate = new Date(dateKey);
                     const daysDifference = Math.floor(
-                      (shiftDate.getTime() - today.getTime()) /
+                      (shiftDate.getTime() - today.getTime()) / 
                       (1000 * 60 * 60 * 24)
                     );
                     const isWithinNextTwoDays =

@@ -37,6 +37,7 @@ export interface User {
   name?: string;
   lastname?: string;
   roles?: number[];
+  isEnabled?: boolean;
 }
 
 export interface AddUserToShiftDialogProps {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -19,13 +19,14 @@ import {
   TableRow,
   Tabs,
   Tab,
+  Pagination,
+  Stack,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
 import { formatDate } from '@/lib/utils';
 import { UserRoles, getRoleName } from '@/lib/constants';
+import { useUserDetailDialog } from '@/hooks/use-user-detail-dialog';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -57,89 +58,53 @@ function TabPanel(props: TabPanelProps) {
 interface UserDetailDialogProps {
   open: boolean;
   onClose: () => void;
-  user: any;
+  userId?: string;
+  user?: any;
 }
 
-const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user }) => {
-  const [shifts, setShifts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tabValue, setTabValue] = useState(0);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  useEffect(() => {
-    const fetchUserShifts = async () => {
-      if (!user?.uid) return;
-      
-      setLoading(true);
-      try {
-        // Los turnos en Firestore están almacenados con ID en formato "YYYY-MM-DD_M" o "YYYY-MM-DD_T"
-        // donde M es mañana y T es tarde
-        const shiftsRef = collection(db, 'shifts');
-        const shiftsSnapshot = await getDocs(shiftsRef);
-        
-        // Procesar los resultados para encontrar los turnos donde está asignado el usuario
-        const shiftsData = [];
-        
-        for (const shiftDoc of shiftsSnapshot.docs) {
-          const data = shiftDoc.data();
-          
-          // Si el documento tiene asignaciones, buscar al usuario actual
-          if (data.assignments && Array.isArray(data.assignments)) {
-            const userAssigned = data.assignments.some(
-              (assignment) => assignment.uid === user.uid
-            );
-            
-            // Si el usuario está asignado a este turno, agregar a la lista
-            if (userAssigned) {
-              // El ID del documento tiene el formato "YYYY-MM-DD_M" o "YYYY-MM-DD_T"
-              const [dateStr, shiftType] = shiftDoc.id.split('_');
-              
-              shiftsData.push({
-                id: shiftDoc.id,
-                date: dateStr,
-                startTime: shiftType === 'M' ? '09:00' : '16:00',
-                endTime: shiftType === 'M' ? '13:00' : '20:00',
-                area: shiftType === 'M' ? 'Mañana' : 'Tarde',
-                assignments: data.assignments,
-              });
-            }
-          }
-        }
-        
-        // Ordenar los turnos por fecha (más recientes primero)
-        shiftsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        
-        setShifts(shiftsData);
-      } catch (error) {
-        console.error('Error fetching user shifts:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (open && user) {
-      fetchUserShifts();
-    }
-  }, [open, user]);
-
-  if (!user) return null;
-
-  // Separar turnos pendientes (futuros) y pasados
-  const now = new Date();
-  const upcomingShifts = shifts.filter(shift => {
-    const shiftDate = new Date(shift.date);
-    return shiftDate >= now;
-  });
-  
-  const pastShifts = shifts.filter(shift => {
-    const shiftDate = new Date(shift.date);
-    return shiftDate < now;
+const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ 
+  open, 
+  onClose, 
+  userId, 
+  user: userProp 
+}) => {
+  const {
+    userData,
+    loading,
+    userLoading,
+    tabValue,
+    handleTabChange,
+    upcomingShiftsCount,
+    pastShiftsCount,
+    paginatedUpcomingShifts,
+    paginatedPastShifts,
+    upcomingPage,
+    pastPage,
+    totalUpcomingPages,
+    totalPastPages,
+    handleUpcomingPageChange,
+    handlePastPageChange,
+  } = useUserDetailDialog({
+    open,
+    userId,
+    user: userProp,
+    shiftsPerPage: 15
   });
 
-  // Función para renderizar un rol
+  if (userLoading) {
+    return (
+      <Dialog open={open} onClose={onClose}>
+        <DialogContent>
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (!userData) return null;
+
   const renderRole = (roleId: number) => {
     let color = 'primary';
     if (roleId === UserRoles.ADMINISTRADOR) {
@@ -159,8 +124,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
     );
   };
 
-  // Función para renderizar la tabla de turnos
-  const renderShiftsTable = (shiftsData: any[]) => {
+  const renderShiftsTable = (shiftsData: any[], currentPage: number, totalPages: number, handlePageChange: (event: React.ChangeEvent<unknown>, value: number) => void) => {
     if (shiftsData.length === 0) {
       return (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 2 }}>
@@ -170,26 +134,41 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
     }
 
     return (
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Fecha</TableCell>
-              <TableCell>Turno</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {shiftsData.map((shift) => (
-              <TableRow key={shift.id}>
-                <TableCell>{formatDate(shift.date)}</TableCell>
-                <TableCell>
-                  {shift.area}
-                </TableCell>
+      <>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Fecha</TableCell>
+                <TableCell>Turno</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {shiftsData.map((shift) => (
+                <TableRow key={shift.id}>
+                  <TableCell>{formatDate(shift.date)}</TableCell>
+                  <TableCell>
+                    {shift.area}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        {/* Control de paginación */}
+        {totalPages > 1 && (
+          <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+            <Pagination 
+              count={totalPages} 
+              page={currentPage} 
+              onChange={handlePageChange} 
+              color="primary" 
+              size="small"
+            />
+          </Stack>
+        )}
+      </>
     );
   };
 
@@ -212,36 +191,36 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
         {/* Información del usuario */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="body1"  gutterBottom>
-            {user.name} {user.lastname}
+            {userData.name} {userData.lastname}
           </Typography>
           
           <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
-            {Array.isArray(user.roles) 
-              ? user.roles.map(renderRole)
-              : user.role ? renderRole(user.role) : null}
+            {Array.isArray(userData.roles) 
+              ? userData.roles.map(renderRole)
+              : userData.role ? renderRole(userData.role) : null}
           </Box>
 
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="text.secondary">
-                Usuario: <strong>{user.username}</strong>
+                Usuario: <strong>{userData.username || 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Correo: <strong>{user.email}</strong>
+                Correo: <strong>{userData.email || 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Teléfono: <strong>{user.phone}</strong>
+                Teléfono: <strong>{userData.phone || 'No disponible'}</strong>
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="text.secondary">
-                Fecha de nacimiento: <strong>{user.birthdate ? formatDate(user.birthdate) : 'No disponible'}</strong>
+                Fecha de nacimiento: <strong>{userData.birthdate ? formatDate(userData.birthdate) : 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Profesión: <strong>{user.job || 'No disponible'}</strong>
+                Profesión: <strong>{userData.job || 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Localidad: <strong>{user.location || 'No disponible'}</strong>
+                Localidad: <strong>{userData.location || 'No disponible'}</strong>
               </Typography>
             </Grid>
           </Grid>
@@ -261,8 +240,8 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
           indicatorColor="primary"
           textColor="primary"
         >
-          <Tab label={`Turnos Pendientes (${upcomingShifts.length})`} />
-          <Tab label={`Turnos Pasados (${pastShifts.length})`} />
+          <Tab label={`Turnos Pendientes (${upcomingShiftsCount})`} />
+          <Tab label={`Turnos Pasados (${pastShiftsCount})`} />
         </Tabs>
 
         {loading ? (
@@ -272,10 +251,10 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, onClose, user
         ) : (
           <>
             <TabPanel value={tabValue} index={0}>
-              {renderShiftsTable(upcomingShifts)}
+              {renderShiftsTable(paginatedUpcomingShifts, upcomingPage, totalUpcomingPages, handleUpcomingPageChange)}
             </TabPanel>
             <TabPanel value={tabValue} index={1}>
-              {renderShiftsTable(pastShifts)}
+              {renderShiftsTable(paginatedPastShifts, pastPage, totalPastPages, handlePastPageChange)}
             </TabPanel>
           </>
         )}

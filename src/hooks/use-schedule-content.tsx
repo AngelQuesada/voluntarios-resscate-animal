@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { format, parseISO, eachDayOfInterval, addDays } from "date-fns";
+import { format, parseISO, eachDayOfInterval, addDays, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   getAuth,
@@ -58,6 +58,7 @@ interface UseScheduleContentResult {
   isLoading: boolean;
   authLoading: boolean;
   currentUser: CurrentUser | null;
+  isContentLoading: boolean;
   error: string | null;
   snackbarOpen: boolean;
   snackbarMessage: string;
@@ -106,6 +107,11 @@ interface UseScheduleContentResult {
   cancelAddUser: () => void;
   allUsersList: { id: string; name?: string; lastname?: string, roles?: number[] }[];
   renderLoadingScreen: () => React.ReactNode;
+  
+  // Nuevos valores y funciones para carga infinita
+  daysToDisplay: Date[];
+  isLoadingMoreDays: boolean;
+  shouldShowLoader: boolean;
 }
 
 // --- The Custom Hook ---
@@ -138,17 +144,30 @@ export function useScheduleContent({
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [shiftForUserAssignment, setShiftForUserAssignment] = useState<{ dateKey: string; shiftKey: "M" | "T" } | null>(null);
 
+  const [visibleDaysCount, setVisibleDaysCount] = useState(7);
+  const [isLoadingMoreDays, setIsLoadingMoreDays] = useState(false);
 
   const auth = getAuth();
 
   const theme = useTheme();
 
   // --- Calcular el rango de fechas ---
-  // Nos aseguramos de que las fechas sean válidas
   const safeEndDate =
     endDate && !isNaN(endDate.getTime()) ? endDate : addDays(startDate, 6);
 
   const dateRange = eachDayOfInterval({ start: startDate, end: safeEndDate });
+
+  // Calcular todos los días que se pueden mostrar
+  const allDaysToDisplay = useMemo(() => {
+    const start = startOfDay(startDate);
+    const end = startOfDay(safeEndDate);
+    return eachDayOfInterval({ start, end });
+  }, [startDate, safeEndDate]);
+  
+  // Filtrar solo los días que queremos mostrar actualmente
+  const daysToDisplay = useMemo(() => {
+    return allDaysToDisplay.slice(0, visibleDaysCount);
+  }, [allDaysToDisplay, visibleDaysCount]);
 
   // Convertir fechas a formato ISO para que sean serializables
   const startDateISO = startDate.toISOString();
@@ -196,6 +215,68 @@ export function useScheduleContent({
 
   // Mutation hook para modificar turnos
   const [modifyShift] = useModifyShiftMutation();
+
+  // Evento de scroll para carga infinita
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isLoadingMoreDays) return;
+      
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const bodyHeight = document.body.offsetHeight;
+      
+      const scrollThreshold = bodyHeight - 5;
+              
+      if (scrollPosition >= scrollThreshold && shouldLoadMoreDays()) {
+        setIsLoadingMoreDays(true);
+        
+        // Añadir un pequeño retardo para evitar múltiples cargas
+        setTimeout(() => {
+          setVisibleDaysCount(prev => {
+            const newCount = Math.min(prev + 4, allDaysToDisplay.length);
+            return newCount;
+          });
+          setIsLoadingMoreDays(false);
+        }, 500);
+      }
+    };
+  
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [visibleDaysCount, allDaysToDisplay.length, isLoadingMoreDays]);
+  
+  const shouldLoadMoreDays = useCallback(() => {
+    if (visibleDaysCount >= allDaysToDisplay.length) {
+      return false;
+    }
+
+    if (activeTab === 0) {
+      return true;
+    }
+
+    if (activeTab === 1 && currentUser) {
+      for (let i = visibleDaysCount; i < allDaysToDisplay.length; i++) {
+        const date = allDaysToDisplay[i];
+        const dateKey = format(date, "yyyy-MM-dd");
+        const dayAssignments = processedAssignments[dateKey];
+        
+        if (dayAssignments) {
+          const hasMorningShift = dayAssignments.M?.some(a => a.uid === currentUser.uid) ?? false;
+          const hasAfternoonShift = dayAssignments.T?.some(a => a.uid === currentUser.uid) ?? false;
+          
+          if (hasMorningShift || hasAfternoonShift) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    
+    return false;
+  }, [visibleDaysCount, allDaysToDisplay, activeTab, currentUser, processedAssignments]);
+  
+  const shouldShowLoader = useMemo(() => {
+    return shouldLoadMoreDays();
+  }, [shouldLoadMoreDays]);
 
   // Snackbar Handler
   const showSnackbar: UseScheduleContentResult["showSnackbar"] = (
@@ -286,8 +367,8 @@ export function useScheduleContent({
     shiftKey: "M" | "T",
     targetUserId: string,
     targetUserName: string, // Solo usado para mensajes UI, no para la BD
-    targetUserRoles: number[] | undefined, // Solo usado para lógica local, no para la BD
-    actionType: 'add' | 'remove'
+    targetUserRoles?: number[],
+    actionType: 'add' | 'remove' = 'add'
   ) => {
     if (targetUserId === currentUser?.uid && (!currentUser?.name || !currentUser?.lastname)) {
       showSnackbar("Perfil incompleto (nombre/apellido).", "warning");
@@ -481,6 +562,7 @@ export function useScheduleContent({
 
   // Estado loading combinado
   const isLoading = authLoading || shiftsLoading || userShiftsLoading || usersLoading;
+  const isContentLoading = isLoading;
 
   const renderShiftAssignmentList = (dayKey: string, shiftKey: "M" | "T") => {
     const assignmentsToRender = processedAssignments[dayKey]?.[shiftKey];
@@ -820,8 +902,6 @@ export function useScheduleContent({
     initiateShiftAction,
     confirmShiftAction,
     cancelShiftAction,
-
-    // Admin features
     removeUserConfirmOpen,
     setRemoveUserConfirmOpen,
     userToRemoveDetails,
@@ -836,5 +916,9 @@ export function useScheduleContent({
     cancelAddUser,
     renderLoadingScreen,
     allUsersList,
+    isContentLoading,
+    daysToDisplay,
+    isLoadingMoreDays,
+    shouldShowLoader
   };
 }

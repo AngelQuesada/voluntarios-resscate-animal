@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { format, eachDayOfInterval, isValid, startOfDay } from "date-fns";
+import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { ScheduleContentProps } from "@/app/schedule/page";
 import { useScheduleContent } from "@/hooks/use-schedule-content";
@@ -39,14 +39,7 @@ export default function ScheduleContent({
   endDate,
 }: ScheduleContentProps) {
   const theme = useTheme();
-
-  // Memoizar el rango de fechas para evitar recálculos innecesarios
-  const daysToDisplay = useMemo(() => {
-    const start = startOfDay(startDate);
-    const end = startOfDay(endDate);
-    return eachDayOfInterval({ start, end });
-  }, [startDate, endDate]);
-
+  
   const {
     authLoading,
     currentUser,
@@ -59,7 +52,7 @@ export default function ScheduleContent({
     snackbarSeverity,
     renderShiftAssignmentList,
     getShiftDisplayName,
-    isLoading,
+    isContentLoading,
     selectedVolunteer,
     contactDialogOpen,
     setContactDialogOpen,
@@ -80,9 +73,12 @@ export default function ScheduleContent({
     allUsersList,
     shiftForUserAssignment,
     renderLoadingScreen,
+    daysToDisplay,
+    isLoadingMoreDays,
+    shouldShowLoader
   } = useScheduleContent({
-    startDate: daysToDisplay[0],
-    endDate: daysToDisplay[daysToDisplay.length - 1],
+    startDate,
+    endDate,
   });
 
   const renderScheduleTable = () => {
@@ -386,7 +382,7 @@ export default function ScheduleContent({
     return <Alert severity="error">{error}</Alert>;
   }
 
-  if (authLoading || isLoading) {
+  if (authLoading || isContentLoading) {
     return renderLoadingScreen();
   }
 
@@ -423,6 +419,31 @@ export default function ScheduleContent({
           </Tabs>
         </Box>
         {renderScheduleTable()}
+        
+      {/* Elemento indicador de carga - solo mostrar si hay más turnos para cargar */}
+      {shouldShowLoader && (
+        <Box 
+          sx={{ 
+            display: "flex", 
+            justifyContent: "center", 
+            alignItems: "center",
+            py: 4,
+            width: "100%",
+            mt: 3,
+            mb: 3,
+            minHeight: "100px",
+            border: '1px dashed #ccc',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(0, 0, 0, 0.02)'
+          }}
+        >
+          <CircularProgress size={30} color="primary" />
+          <Typography variant="body1" sx={{ ml: 2, color: "text.secondary" }}>
+            Continúa al final de la página para cargar más días
+          </Typography>
+        </Box>
+      )}
+
       </Box>
       <NotificationSnackbar
         open={snackbarOpen}

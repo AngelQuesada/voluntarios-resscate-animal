@@ -19,13 +19,13 @@ export interface UseScheduleContentResult {
   // Desde useAuthUserStatus
   currentUser: CurrentUser | null;
   authLoading: boolean;
-  authError: string | null; // Renombrado desde 'error' para evitar colisión
+  authError: string | null;
 
   // Desde useShiftsData
   processedAssignments: ProcessedAssignments;
   filteredAssignments: ProcessedAssignments;
   allUsersList: { id: string; name?: string; lastname?: string; roles?: number[] }[];
-  usersMap: { [uid: string]: User }; // Añadido usersMap que faltaba
+  usersMap: { [uid: string]: User };
   shiftsLoading: boolean;
   userShiftsLoading: boolean;
   usersLoading: boolean;
@@ -69,8 +69,8 @@ export interface UseScheduleContentResult {
   endDate: Date;
 
   // Funciones y valores combinados o específicos de este hook
-  isLoading: boolean; // Estado de carga combinado
-  isContentLoading: boolean; // Alias para isLoading
+  isLoading: boolean;
+  isContentLoading: boolean;
   shiftsTimeKeys: ("M" | "T")[];
   getShiftDisplayName: (shiftKey: "M" | "T") => string;
   renderShiftAssignmentList: (dayKey: string, shiftKey: "M" | "T") => React.ReactNode;
@@ -88,6 +88,13 @@ export function useScheduleContent({
     setUiSnackbarMessage(message);
     setUiSnackbarSeverity(severity);
     setUiSnackbarOpen(true);
+  }, []);
+
+  const handleUiSnackbarClose = React.useCallback((event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setUiSnackbarOpen(false);
   }, []);
   
   // Hook de autenticación
@@ -137,9 +144,9 @@ export function useScheduleContent({
   useEffect(() => {
     if (shiftsError) {
       console.error("Error cargando turnos (desde useScheduleContent):", shiftsError);
-      scheduleUI.showSnackbar("Error al cargar los turnos.", "error");
+      showSnackbar("Error al cargar los turnos.", "error");
     }
-  }, [shiftsError, scheduleUI.showSnackbar]);
+  }, [shiftsError, showSnackbar]);
 
 
   // Helper Functions
@@ -311,6 +318,13 @@ export function useScheduleContent({
 
     // Schedule UI
     ...scheduleUI,
+    
+    snackbarOpen: uiSnackbarOpen,
+    snackbarMessage: uiSnackbarMessage,
+    snackbarSeverity: uiSnackbarSeverity,
+    showSnackbar: showSnackbar,
+    handleSnackbarClose: handleUiSnackbarClose,
+
     endDate: scheduleUI.safeEndDate,
 
     isLoading,

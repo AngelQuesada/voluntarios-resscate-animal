@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Importar React para React.ReactNode
 import { format, eachDayOfInterval, addDays, startOfDay } from "date-fns";
 import { UserRoles } from "@/lib/constants";
 import { db } from "@/lib/firebase";
@@ -10,9 +10,9 @@ import { ProcessedAssignments } from './useShiftsData';
 
 export interface ScheduleUI {
   snackbarOpen: boolean;
-  snackbarMessage: string;
+  snackbarMessage: React.ReactNode; // Modificado
   snackbarSeverity: "success" | "error" | "info" | "warning";
-  showSnackbar: (message: string, severity?: "success" | "error" | "info" | "warning") => void;
+  showSnackbar: (message: React.ReactNode, severity?: "success" | "error" | "info" | "warning") => void; // Modificado
   handleSnackbarClose: (event?: React.SyntheticEvent | Event, reason?: string) => void;
   selectedVolunteer: ShiftAssignment | null;
   contactDialogOpen: boolean;
@@ -38,8 +38,8 @@ interface UseScheduleUIProps {
   currentUser: CurrentUser | null;
   usersMap: { [uid: string]: User };
   processedAssignments: ProcessedAssignments;
-  myShiftsCount: number; // Necesario para la lógica inicial de la pestaña
-  authLoading: boolean; // Necesario para la lógica inicial de la pestaña
+  myShiftsCount: number; 
+  authLoading: boolean; 
 }
 
 export function useScheduleUI({
@@ -52,14 +52,14 @@ export function useScheduleUI({
   authLoading,
 }: UseScheduleUIProps): ScheduleUI {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarMessage, setSnackbarMessage] = useState<React.ReactNode>(""); // Modificado
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error" | "info" | "warning">("info");
   const [selectedVolunteer, setSelectedVolunteer] = useState<ShiftAssignment | null>(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [initialTabLogicApplied, setInitialTabLogicApplied] = useState(false);
 
-  const [visibleDaysCount, setVisibleDaysCount] = useState(7); // Días iniciales a mostrar
+  const [visibleDaysCount, setVisibleDaysCount] = useState(7); 
   const [isLoadingMoreDays, setIsLoadingMoreDays] = useState(false);
 
   const safeEndDate = useMemo(() => 
@@ -80,7 +80,7 @@ export function useScheduleUI({
     return allDaysToDisplay.slice(0, visibleDaysCount);
   }, [allDaysToDisplay, visibleDaysCount]);
 
-  const showSnackbar = (message: string, severity: "success" | "error" | "info" | "warning" = "info") => {
+  const showSnackbar = (message: React.ReactNode, severity: "success" | "error" | "info" | "warning" = "info") => { // Modificado
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
@@ -122,19 +122,18 @@ export function useScheduleUI({
         }
       } catch (error) {
         console.error("Error al obtener datos del voluntario:", error);
-        showSnackbar("Error al obtener datos de contacto", "error");
+        showSnackbar("Error al obtener datos de contacto.", "error");
       }
       return;
     }
 
-    // Lógica para voluntario contactando a responsable en el mismo turno
     const isVoluntario = currentUser.roles?.includes(UserRoles.VOLUNTARIO) || !currentUser.roles;
     if (isVoluntario) {
         const targetIsResponsibleInAnyOfUserShifts = Object.values(processedAssignments).some(dayShifts => 
             Object.values(dayShifts).some(shiftAssignments => 
                 shiftAssignments &&
-                shiftAssignments.some(a => a.uid === currentUser.uid) && // Current user is in this shift
-                shiftAssignments.some(a => a.uid === volunteer.uid && a.roles?.includes(UserRoles.RESPONSABLE)) // Target volunteer is a responsable in this same shift
+                shiftAssignments.some(a => a.uid === currentUser.uid) && 
+                shiftAssignments.some(a => a.uid === volunteer.uid && a.roles?.includes(UserRoles.RESPONSABLE)) 
             )
         );
 
@@ -151,10 +150,12 @@ export function useScheduleUI({
             const responsableData = responsableDoc.data();
             setSelectedVolunteer({ ...volunteer, phone: responsableData.phone || "" });
             setContactDialogOpen(true);
+          } else {
+            showSnackbar("No se pudo obtener la información de contacto del responsable.", "warning");
           }
         } catch (error) {
           console.error("Error al obtener datos del responsable:", error);
-          showSnackbar("Error al obtener datos de contacto", "error");
+          showSnackbar("Error al obtener datos de contacto del responsable.", "error");
         }
       } else {
         showSnackbar("Solo puedes contactar con el responsable de tu turno.", "warning");
@@ -166,27 +167,6 @@ export function useScheduleUI({
     setActiveTab(newValue);
   };
 
-  // Efecto para la carga infinita
-  useEffect(() => {
-    const handleScroll = () => {
-      if (isLoadingMoreDays || !shouldLoadMoreDays()) return;
-      
-      const scrollPosition = window.innerHeight + window.scrollY;
-      const bodyHeight = document.body.offsetHeight;
-      const scrollThreshold = bodyHeight - 100; // Umbral un poco antes del final
-              
-      if (scrollPosition >= scrollThreshold) {
-        setIsLoadingMoreDays(true);
-        setTimeout(() => {
-          setVisibleDaysCount(prev => Math.min(prev + 7, allDaysToDisplay.length));
-          setIsLoadingMoreDays(false);
-        }, 500);
-      }
-    };
-  
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLoadingMoreDays, allDaysToDisplay.length, visibleDaysCount]);
 
   const shouldLoadMoreDays = useCallback(() => {
     if (visibleDaysCount >= allDaysToDisplay.length) return false;
@@ -207,11 +187,32 @@ export function useScheduleUI({
     return false;
   }, [visibleDaysCount, allDaysToDisplay, activeTab, currentUser, processedAssignments]);
 
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isLoadingMoreDays || !shouldLoadMoreDays()) return;
+      
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const bodyHeight = document.body.offsetHeight;
+      const scrollThreshold = bodyHeight - 100; 
+              
+      if (scrollPosition >= scrollThreshold) {
+        setIsLoadingMoreDays(true);
+        setTimeout(() => {
+          setVisibleDaysCount(prev => Math.min(prev + 7, allDaysToDisplay.length));
+          setIsLoadingMoreDays(false);
+        }, 500);
+      }
+    };
+  
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isLoadingMoreDays, allDaysToDisplay.length, visibleDaysCount, shouldLoadMoreDays]); // Añadido shouldLoadMoreDays
+
   const shouldShowLoader = useMemo(() => {
     return isLoadingMoreDays || (shouldLoadMoreDays() && visibleDaysCount < allDaysToDisplay.length);
   }, [isLoadingMoreDays, shouldLoadMoreDays, visibleDaysCount, allDaysToDisplay.length]);
 
-  // Efecto para la lógica de la pestaña inicial
    useEffect(() => {
     if (!authLoading && currentUser && !initialTabLogicApplied) {
       const hasInitiallyAssignedShifts = myShiftsCount > 0;

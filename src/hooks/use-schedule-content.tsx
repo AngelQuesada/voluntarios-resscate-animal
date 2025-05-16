@@ -19,13 +19,13 @@ export interface UseScheduleContentResult {
   // Desde useAuthUserStatus
   currentUser: CurrentUser | null;
   authLoading: boolean;
-  authError: string | null;
+  authError: string | null; 
 
   // Desde useShiftsData
   processedAssignments: ProcessedAssignments;
   filteredAssignments: ProcessedAssignments;
   allUsersList: { id: string; name?: string; lastname?: string; roles?: number[] }[];
-  usersMap: { [uid: string]: User };
+  usersMap: { [uid: string]: User }; 
   shiftsLoading: boolean;
   userShiftsLoading: boolean;
   usersLoading: boolean;
@@ -52,9 +52,9 @@ export interface UseScheduleContentResult {
 
   // Desde useScheduleUI
   snackbarOpen: boolean;
-  snackbarMessage: string;
+  snackbarMessage: React.ReactNode;
   snackbarSeverity: "success" | "error" | "info" | "warning";
-  showSnackbar: (message: string, severity?: "success" | "error" | "info" | "warning") => void;
+  showSnackbar: (message: React.ReactNode, severity?: "success" | "error" | "info" | "warning") => void;
   handleSnackbarClose: (event?: React.SyntheticEvent | Event, reason?: string) => void;
   selectedVolunteer: ShiftAssignment | null;
   contactDialogOpen: boolean;
@@ -68,9 +68,8 @@ export interface UseScheduleContentResult {
   dateRange: Date[];
   endDate: Date;
 
-  // Funciones y valores combinados o específicos de este hook
-  isLoading: boolean;
-  isContentLoading: boolean;
+  isLoading: boolean; 
+  isContentLoading: boolean; 
   shiftsTimeKeys: ("M" | "T")[];
   getShiftDisplayName: (shiftKey: "M" | "T") => string;
   renderShiftAssignmentList: (dayKey: string, shiftKey: "M" | "T") => React.ReactNode;
@@ -78,18 +77,18 @@ export interface UseScheduleContentResult {
 
 export function useScheduleContent({
   startDate = new Date(),
-  endDate: initialEndDate, // Renombrar para evitar confusión con la endDate calculada
+  endDate: initialEndDate, 
 }: UseScheduleContentOptions): UseScheduleContentResult {
   const [uiSnackbarOpen, setUiSnackbarOpen] = useState(false);
-  const [uiSnackbarMessage, setUiSnackbarMessage] = useState("");
+  const [uiSnackbarMessage, setUiSnackbarMessage] = useState<React.ReactNode>("");
   const [uiSnackbarSeverity, setUiSnackbarSeverity] = useState<"success" | "error" | "info" | "warning">("info");
 
-  const showSnackbar = React.useCallback((message: string, severity: "success" | "error" | "info" | "warning" = "info") => {
+  const showUiSnackbar = React.useCallback((message: React.ReactNode, severity: "success" | "error" | "info" | "warning" = "info") => {
     setUiSnackbarMessage(message);
     setUiSnackbarSeverity(severity);
     setUiSnackbarOpen(true);
   }, []);
-
+  
   const handleUiSnackbarClose = React.useCallback((event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === "clickaway") {
       return;
@@ -97,17 +96,14 @@ export function useScheduleContent({
     setUiSnackbarOpen(false);
   }, []);
   
-  // Hook de autenticación
-  const { currentUser, authLoading, error: authError } = useAuthUserStatus({ showSnackbar });
+  const { currentUser, authLoading, error: authError } = useAuthUserStatus({ showSnackbar: showUiSnackbar });
 
-  // Convertir fechas a formato ISO para RTK Query (solo una vez)
   const startDateISO = useMemo(() => startDate.toISOString(), [startDate]);
   const safeEndDate = useMemo(() =>
     initialEndDate && !isNaN(initialEndDate.getTime()) ? initialEndDate : new Date(new Date(startDate).setDate(startDate.getDate() + 6))
   , [startDate, initialEndDate]);
   const endDateISO = useMemo(() => safeEndDate.toISOString(), [safeEndDate]);
 
-  // Hook para datos de turnos
   const {
     processedAssignments,
     filteredAssignments,
@@ -120,16 +116,14 @@ export function useScheduleContent({
     myShiftsCount,
   } = useShiftsData({ startDateISO, endDateISO, currentUser });
   
-  // Hook para acciones de turno
   const shiftActions = useShiftActions({
     currentUser,
     usersMap,
     processedAssignments,
-    showSnackbar,
+    showSnackbar: showUiSnackbar,
     authLoading,
   });
 
-  // Hook para UI
   const scheduleUI = useScheduleUI({
     startDate,
     endDate: initialEndDate,
@@ -140,21 +134,18 @@ export function useScheduleContent({
     authLoading,
   });
 
-  // Efecto para manejar errores de carga de turnos desde useShiftsData
   useEffect(() => {
     if (shiftsError) {
       console.error("Error cargando turnos (desde useScheduleContent):", shiftsError);
-      showSnackbar("Error al cargar los turnos.", "error");
+      showUiSnackbar("Error al cargar los turnos.", "error");
     }
-  }, [shiftsError, showSnackbar]);
+  }, [shiftsError, showUiSnackbar]);
 
 
-  // Helper Functions
   const getShiftDisplayName = (shiftKey: "M" | "T"): string => {
     return shiftKey === "M" ? "Mañana" : "Tarde";
   };
 
-  // Estado loading combinado
   const isLoading = authLoading || shiftsLoading || userShiftsLoading || usersLoading;
   const isContentLoading = isLoading;
 
@@ -297,12 +288,10 @@ export function useScheduleContent({
 
 
   return {
-    // Auth
     currentUser,
     authLoading,
     authError,
 
-    // Shifts Data
     processedAssignments,
     filteredAssignments,
     allUsersList,
@@ -313,17 +302,15 @@ export function useScheduleContent({
     shiftsError,
     myShiftsCount,
 
-    // Shift Actions
     ...shiftActions,
 
-    // Schedule UI
     ...scheduleUI,
     
     snackbarOpen: uiSnackbarOpen,
     snackbarMessage: uiSnackbarMessage,
     snackbarSeverity: uiSnackbarSeverity,
-    showSnackbar: showSnackbar,
-    handleSnackbarClose: handleUiSnackbarClose,
+    showSnackbar: showUiSnackbar, 
+    handleSnackbarClose: handleUiSnackbarClose, 
 
     endDate: scheduleUI.safeEndDate,
 

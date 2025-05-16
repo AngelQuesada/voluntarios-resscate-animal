@@ -18,9 +18,12 @@ export interface User {
 
 export interface CurrentUser extends Omit<FirebaseUser, "providerData"> {
   providerData?: any[];
+  email: string;
+  uid: string;
   name?: string;
   lastname?: string;
   roles?: number[];
   phone?: string;
+  isEnabled: boolean;
 }
 

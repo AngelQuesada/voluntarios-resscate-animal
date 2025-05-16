@@ -1,59 +1,60 @@
-import { useState, useEffect } from 'react';
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { CurrentUser } from '@/types/common';
 
-export interface AuthUserStatus {
-  currentUser: CurrentUser | null;
-  authLoading: boolean;
-  error: string | null;
-}
-
 interface UseAuthUserStatusProps {
-  showSnackbar: (message: string, severity?: 'success' | 'error' | 'info' | 'warning') => void;
+  showSnackbar: (message: React.ReactNode, severity?: "success" | "error" | "info" | "warning") => void;
 }
 
-export function useAuthUserStatus({ showSnackbar }: UseAuthUserStatusProps): AuthUserStatus {
+export function useAuthUserStatus({ showSnackbar }: UseAuthUserStatusProps) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const auth = getAuth();
 
   useEffect(() => {
-    setAuthLoading(true);
-    setError(null);
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
+      setAuthLoading(true);
+      setError(null);
+      if (user) {
         try {
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            const combinedUserData: CurrentUser = {
-              ...(firebaseUser as Omit<FirebaseUser, 'providerData'> & { providerData?: any[] }),
-              ...userDocSnap.data(),
-              uid: firebaseUser.uid,
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const currentUserData: CurrentUser = {
+              ...user,
+              email: user.email || '',
+              uid: user.uid,
+              name: userData.name,
+              lastname: userData.lastname,
+              roles: userData.roles,
+              phone: userData.phone,
+              isEnabled: userData.isEnabled !== undefined ? userData.isEnabled : true,
             };
-            setCurrentUser(combinedUserData);
-          } else {
-            console.warn('User document not found in Firestore:', firebaseUser.uid);
-            setCurrentUser(firebaseUser as Omit<FirebaseUser, 'providerData'> & { providerData?: any[] });
-            showSnackbar('Perfil no encontrado. Funcionalidad limitada.', 'warning');
-          }
-        } catch (err) {
-          console.error('Error fetching user data:', err);
-          setCurrentUser(firebaseUser as Omit<FirebaseUser, 'providerData'> & { providerData?: any[] });
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          setError(`Error al cargar datos del perfil: ${errorMessage}`);
-          showSnackbar('Error al cargar datos del perfil.', 'error');
+            setCurrentUser(currentUserData);
+          } 
+        } catch (e) {
+          console.error("Error al obtener datos del usuario de Firestore:", e);
+          setError("Error al cargar datos del usuario.");
+          showSnackbar("Error al cargar los datos del usuario.", "error");
+          const currentUserData: CurrentUser = {
+            ...user,
+            email: user.email || '',
+            uid: user.uid,
+            isEnabled: false
+          };
+          setCurrentUser(currentUserData);
         }
       } else {
         setCurrentUser(null);
       }
       setAuthLoading(false);
     });
+
     return () => unsubscribe();
-  }, [auth, showSnackbar]);
+  }, [showSnackbar]);
 
   return { currentUser, authLoading, error };
 }

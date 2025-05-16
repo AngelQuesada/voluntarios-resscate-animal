@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useModifyShiftMutation, ShiftAssignment } from "@/store/api/shiftsApi";
 import { UserRoles } from "@/lib/constants";
 import { CurrentUser, User } from '@/types/common';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ProcessedAssignments } from './useShiftsData'; // Importar desde el hook de datos
+import { ProcessedAssignments } from './useShiftsData';
 
 export interface ShiftActions {
   isUpdatingShift: { [key: string]: boolean };
@@ -37,7 +37,7 @@ interface UseShiftActionsProps {
   currentUser: CurrentUser | null;
   usersMap: { [uid: string]: User };
   processedAssignments: ProcessedAssignments;
-  showSnackbar: (message: string, severity?: "success" | "error" | "info" | "warning") => void;
+  showSnackbar: (message: React.ReactNode, severity?: "success" | "error" | "info" | "warning") => void;
   authLoading: boolean;
 }
 
@@ -81,28 +81,54 @@ export function useShiftActions({
         dateKey,
         shiftKey,
         uid: targetUserId,
-        name: '',
+        name: '', 
         action: actionType,
       }).unwrap();
 
-      const formattedDate = format(parseISO(dateKey), "EEEE d 'de' MMMM", { locale: es });
+      let formattedDate = format(parseISO(dateKey), "EEEE d 'de' MMMM", { locale: es });
+      const dateParts = formattedDate.split(' ');
+      if (dateParts.length > 3) { 
+          const dayName = dateParts[0];
+          const monthName = dateParts[3];
+          
+          dateParts[0] = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+          dateParts[3] = monthName.toUpperCase();
+          formattedDate = dateParts.join(' ');
+      }
+
       const shiftTimeName = shiftKey === "M" ? "mañana" : "tarde";
-      
+
       if (actionType === "add") {
-        showSnackbar(
-          `${targetUserName} asignado al turno del ${formattedDate} por la ${shiftTimeName}.`,
-          "success"
+        const message = React.createElement(React.Fragment, null, 
+          React.createElement('strong', null, targetUserName), 
+          " asignado al turno del ", 
+          React.createElement('strong', null, formattedDate), 
+          " por la ", 
+          shiftTimeName, 
+          "."
         );
+        showSnackbar(message, "success");
       } else {
-        showSnackbar(
-          `${targetUserName} eliminado del turno del ${formattedDate} por la ${shiftTimeName}.`,
-          "info"
+        const message = React.createElement(React.Fragment, null, 
+          React.createElement('strong', null, targetUserName), 
+          " eliminado del turno del ", 
+          React.createElement('strong', null, formattedDate), 
+          " por la ", 
+          shiftTimeName, 
+          "."
         );
+        showSnackbar(message, "info");
       }
     } catch (err) {
       console.error("Error updating shift:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);
-      showSnackbar(`Error al actualizar el turno para ${targetUserName}: ${errorMessage}`, "error");
+      const message = React.createElement(React.Fragment, null, 
+        "Error al actualizar el turno para ", 
+        React.createElement('strong', null, targetUserName), 
+        ": ", 
+        errorMessage
+      );
+      showSnackbar(message, "error");
     } finally {
       setIsUpdatingShift((prev) => ({ ...prev, [loadingIndicatorKey]: false }));
     }
@@ -129,17 +155,24 @@ export function useShiftActions({
       return; 
     }
     
+    const currentUserName = `${currentUser.name} ${currentUser.lastname}`;
     await executeModifyShift(
       dateKey,
       shiftKey,
       currentUser.uid,
-      `${currentUser.name} ${currentUser.lastname}`,
+      currentUserName,
       isUserAlreadyAssigned ? 'remove' : 'add'
     );
   };
 
   const confirmShiftAction = async () => {
-    if (shiftToAction && currentUser) {
+    if (shiftToAction && currentUser && currentUser.uid) {
+      if (!currentUser.name || !currentUser.lastname) {
+        showSnackbar("No se puede realizar la acción, falta información del usuario (nombre/apellido).", "warning");
+        setConfirmDialogOpen(false);
+        setShiftToAction(null);
+        return;
+      }
       await executeModifyShift(
         shiftToAction.dateKey,
         shiftToAction.shiftKey,
@@ -149,6 +182,10 @@ export function useShiftActions({
       );
       setConfirmDialogOpen(false);
       setShiftToAction(null);
+    } else {
+        showSnackbar("No se puede realizar la acción, usuario no válido o acción no definida.", "warning");
+        setConfirmDialogOpen(false);
+        setShiftToAction(null);
     }
   };
 
@@ -198,7 +235,6 @@ export function useShiftActions({
         `${userToAdd.name || ''} ${userToAdd.lastname || ''}`.trim() || 'Usuario sin nombre',
         'add'
       );
-      // Cerrar el diálogo después de la acción, independientemente del resultado de executeModifyShift
       setAddUserDialogOpen(false);
       setShiftForUserAssignment(null);
     }

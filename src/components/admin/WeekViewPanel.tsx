@@ -164,39 +164,19 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
   };
 
   // Componente para la barra de progreso con texto
-  const ProgressBarWithLabel = ({ value, label, isCurrentWeek, weekTitle }: { value: number, label: string, isCurrentWeek: boolean, weekTitle: string }) => (
+  const ProgressBarWithLabel = ({ value, label, weekTitle }: { value: number, label: string, weekTitle: string }) => (
     <Box sx={{ mb: 2 }}>
-      <Typography 
-        variant="h6" 
-        component="div"
-        sx={{
-          mb: 2,
-          py: 1,
-          px: 2,
-          fontWeight: 'bold',
-          color: '#FFFFFF',
-          borderColor: isCurrentWeek ? 'primary.dark' : 'primary.main',
-          backgroundColor: isCurrentWeek ? 'primary.main' : 'primary.light',
-          borderRadius: '4px 4px 0 0',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          width: '100%',
-          position: 'relative',
-        }}
-      >
-        {weekTitle}
-      </Typography>
-
       <Box sx={{ position: 'relative', display: 'inline-flex', width: '100%' }}>
         <LinearProgress 
           variant="determinate" 
           value={value} 
           sx={{ 
             width: '100%', 
-            height: 30, 
-            borderRadius: 1,
-            backgroundColor: isCurrentWeek ? 'rgba(7, 94, 28, 0.1)' : 'rgba(54, 137, 74, 0.1)',
+            height: 40, 
+            borderRadius: 8,
+            backgroundColor: '#D1D5DB',
             '& .MuiLinearProgress-bar': {
-              backgroundColor: isCurrentWeek ? 'primary.main' : 'primary.light',
+              backgroundColor: '#374151',
               transition: 'transform 0.4s ease'
             }
           }} 
@@ -214,16 +194,28 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
           <Typography 
             variant="body1" 
             component="div" 
-            color="text.primary"
             sx={{ 
               fontWeight: 'bold',
-              textShadow: '0px 0px 3px rgba(255, 255, 255, 0.8)'
+              color: '#FFFFFF',
+              textShadow: '0px 0px 4px rgba(0, 0, 0, 0.8), 1px 1px 2px rgba(0, 0, 0, 0.6)'
             }}
           >
             {label}
           </Typography>
         </Box>
       </Box>
+      
+      <Typography 
+        variant="body2" 
+        component="div"
+        sx={{
+          mt: 1,
+          fontWeight: 'medium',
+          color: 'text.secondary',
+        }}
+      >
+        {weekTitle}
+      </Typography>
     </Box>
   );
 
@@ -233,7 +225,6 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
         <ProgressBarWithLabel 
           value={currentWeekProgress} 
           label={`${volunteersWithShiftsCurrentWeek}/${totalVolunteers} voluntarios`}
-          isCurrentWeek={true}
           weekTitle={currentWeekText}
         />
         
@@ -248,7 +239,6 @@ const WeekViewPanel: React.FC<WeekViewPanelProps> = ({ onUserClick }) => {
         <ProgressBarWithLabel 
           value={nextWeekProgress} 
           label={`${volunteersWithShiftsNextWeek}/${totalVolunteers} voluntarios`}
-          isCurrentWeek={false}
           weekTitle={nextWeekText}
         />
         

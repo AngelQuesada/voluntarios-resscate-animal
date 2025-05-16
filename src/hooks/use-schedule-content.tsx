@@ -218,6 +218,8 @@ export function useScheduleContent({
             }
             
             const assignmentName = userDetails?.name || assignment.name || "Usuario";
+            const assignmentLastname = userDetails?.lastname || "";
+            const displayName = `${assignmentName}${assignmentLastname ? ' ' + assignmentLastname : ''}`;
 
             const Content = (
               <Box
@@ -248,7 +250,7 @@ export function useScheduleContent({
                     }),
                   }}
                 >
-                  {assignmentName}
+                  {displayName}
                   {isCurrentUser && " (Tú)"}
                 </Typography>
                 {isAdmin && !isCurrentUser && (

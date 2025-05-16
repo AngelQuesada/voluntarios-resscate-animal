@@ -195,7 +195,15 @@ export function useShiftActions({
   };
 
   const handleRemoveUserClick = (assignment: ShiftAssignment, dateKey: string, shiftKey: "M" | "T") => {
-    setUserToRemoveDetails({ uid: assignment.uid, name: assignment.name || 'Usuario desconocido', dateKey, shiftKey });
+    // Buscar información completa del usuario en usersMap
+    const userDetails = usersMap[assignment.uid];
+    let displayName = assignment.name || 'Usuario desconocido';
+    
+    if (userDetails) {
+      displayName = `${userDetails.name || ''} ${userDetails.lastname || ''}`.trim() || 'Usuario desconocido';
+    }
+    
+    setUserToRemoveDetails({ uid: assignment.uid, name: displayName, dateKey, shiftKey });
     setRemoveUserConfirmOpen(true);
   };
 

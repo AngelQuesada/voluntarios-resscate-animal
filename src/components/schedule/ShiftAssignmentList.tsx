@@ -81,6 +81,8 @@ const ShiftAssignmentList: React.FC<ShiftAssignmentListProps> = ({
           const roleColor = getRoleColor(assignment.roles);
           const userDetails = usersMap[assignment.uid];
           const assignmentName = userDetails?.name || assignment.name || "Usuario";
+          const assignmentLastname = userDetails?.lastname || "";
+          const displayName = `${assignmentName}${assignmentLastname ? ' ' + assignmentLastname : ''}`;
 
           let canContact = false;
           if (!isCurrentUser && currentUser) {
@@ -122,7 +124,7 @@ const ShiftAssignmentList: React.FC<ShiftAssignmentListProps> = ({
                   }),
                 }}
               >
-                {assignmentName}
+                {displayName}
                 {isCurrentUser && " (Tú)"}
               </Typography>
               {isAdmin && !isCurrentUser && (
@@ -136,7 +138,7 @@ const ShiftAssignmentList: React.FC<ShiftAssignmentListProps> = ({
                     padding: "0px", marginLeft: "4px", color: "white", opacity: 0.8,
                     "&:hover": { opacity: 1, backgroundColor: 'rgba(255,255,255,0.25)' },
                   }}
-                  aria-label={`Eliminar a ${assignmentName} del turno`}
+                  aria-label={`Eliminar a ${displayName} del turno`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
@@ -147,7 +149,7 @@ const ShiftAssignmentList: React.FC<ShiftAssignmentListProps> = ({
           );
 
           return canContact && !isAdmin ? (
-            <Tooltip key={assignment.uid} title={`Contactar con ${assignmentName}`} arrow>
+            <Tooltip key={assignment.uid} title={`Contactar con ${displayName}`} arrow>
               {Content}
             </Tooltip>
           ) : (

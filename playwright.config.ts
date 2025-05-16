@@ -5,34 +5,37 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 2, // Un término medio: 2 workers permiten algo de paralelismo sin sobrecargar
+  workers: 2, 
   reporter: 'html',
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
+    // Timeouts aumentados para todas las acciones
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
   },
   projects: [
-    // Primer proyecto: tests de login
+    {
+      name: 'chrome',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Proyectos específicos para comandos concretos
     {
       name: 'login-tests',
       testMatch: /login\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
-    // Segundo proyecto: tests de asignación de roles
     {
       name: 'role-assignment-tests',
       testMatch: /shift-assignment-by-role\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['login-tests'], // Se ejecuta después de los tests de login
     },
-    // Tercer proyecto: tests de historial de admin
     {
       name: 'history-view-tests',
       testMatch: /history-view\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['role-assignment-tests'], // Se ejecuta después de los tests de asignación de roles
     },
-    // Browser projects para ejecución completa (opcional)
+    // Navegadores adicionales
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
@@ -46,5 +49,6 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    timeout: 60000, // 60 segundos para iniciar el servidor
   },
 });

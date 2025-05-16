@@ -362,22 +362,22 @@ export function AdminPanel() {
             sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
           >
             <Tab 
-              icon={<PeopleIcon />} 
-              label="Usuarios" 
+              icon={<DateRangeIcon />} 
+              label="Semana" 
               iconPosition="start"
               id="tab-0"
               aria-controls="tabpanel-0"
             />
             <Tab 
-              icon={<HistoryIcon />} 
-              label="Historial" 
+              icon={<PeopleIcon />} 
+              label="Usuarios" 
               iconPosition="start"
               id="tab-1"
               aria-controls="tabpanel-1"
             />
             <Tab 
-              icon={<DateRangeIcon />} 
-              label="Semana" 
+              icon={<HistoryIcon />} 
+              label="Historial" 
               iconPosition="start"
               id="tab-2"
               aria-controls="tabpanel-2"
@@ -386,26 +386,26 @@ export function AdminPanel() {
 
           {/* Contenido de las pestañas */}
           <TabPanel value={activeTab} index={0}>
-            <UsersTable />
-          </TabPanel>
-          
-          <TabPanel value={activeTab} index={1}>
             <Suspense fallback={
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                 <CircularProgress />
               </Box>
             }>
-              {activeTab === 1 && <HistoryCalendar />}
+              {activeTab === 0 && <WeekViewPanel onUserClick={handleOpenUserDetailDialog} />}
             </Suspense>
           </TabPanel>
 
+          <TabPanel value={activeTab} index={1}>
+            <UsersTable />
+          </TabPanel>
+          
           <TabPanel value={activeTab} index={2}>
             <Suspense fallback={
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                 <CircularProgress />
               </Box>
             }>
-              {activeTab === 2 && <WeekViewPanel onUserClick={handleOpenUserDetailDialog} />}
+              {activeTab === 2 && <HistoryCalendar />}
             </Suspense>
           </TabPanel>
         </Box>

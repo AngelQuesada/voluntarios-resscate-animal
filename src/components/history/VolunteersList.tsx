@@ -152,7 +152,6 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
     setSelectedVolunteer(null);
   };
 
-  // Función para determinar el color según el rol
   const getRoleColor = (roles?: number[]) => {
     if (!roles) return "text.secondary";
     if (roles.includes(UserRoles.RESPONSABLE)) return "success.main";
@@ -177,7 +176,7 @@ const VolunteersList: React.FC<VolunteersListProps> = ({ selectedDate }) => {
     );
   }
 
-  // Filtrar por turno - usando 'M' y 'T'
+  // Filtrar por turno de mañana y tarde
   const morningVolunteers = volunteers.filter(v => v.shift === 'M');
   const afternoonVolunteers = volunteers.filter(v => v.shift === 'T');
 

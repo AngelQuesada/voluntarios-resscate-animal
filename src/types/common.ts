@@ -1,8 +1,5 @@
-// Este archivo contendrá tipos e interfaces comunes utilizados en toda la aplicación.
+import { User as FirebaseUser } from "firebase/auth";
 
-/**
- * Representa la estructura de datos de un usuario en Firestore y en la aplicación.
- */
 export interface User {
   id?: string;
   uid: string;
@@ -18,3 +15,19 @@ export interface User {
   createdAt: string;
   isEnabled?: boolean; 
 }
+
+export interface CurrentUser extends Omit<FirebaseUser, "providerData"> {
+  providerData?: any[];
+  email: string;
+  uid: string;
+  name?: string;
+  lastname?: string;
+  roles?: number[];
+  phone?: string;
+  isEnabled: boolean;
+}
+
+export interface HeaderProps {
+  userRoles: string[];
+}
+

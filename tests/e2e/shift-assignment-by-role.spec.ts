@@ -15,8 +15,24 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
     
-    // Esperar a que cargue el contenido de la programación
-    await page.waitForSelector('table', { timeout: 10000 });
+    // Estrategia mejorada para esperar que cargue el contenido de la programación
+    try {
+      // Intentar múltiples selectores para identificar cuando la tabla ha cargado
+      await Promise.race([
+        page.waitForSelector('table', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('tbody', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('div:has-text("Mañana")', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('div:has-text("Tarde")', { timeout: 15000, state: 'visible' })
+      ]);
+      
+      // Esperar un poco más para asegurar que todos los elementos interactivos están disponibles
+      await page.waitForTimeout(1000);
+    } catch (error) {
+      console.error('Error esperando a que la tabla se cargue:', error);
+      // Capturar screenshot para depuración
+      await page.screenshot({ path: './test-results/table-loading-error.png' });
+      throw new Error('No se pudo cargar la tabla de turnos a tiempo');
+    }
     
     // Verificar si hay algún turno ya asignado (texto "(Tú)")
     const alreadyAssigned = await page.locator('text="(Tú)"').count() > 0;
@@ -130,8 +146,24 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
     
-    // Esperar a que cargue el contenido de la programación
-    await page.waitForSelector('table', { timeout: 10000 });
+    // Estrategia mejorada para esperar que cargue el contenido de la programación
+    try {
+      // Intentar múltiples selectores para identificar cuando la tabla ha cargado
+      await Promise.race([
+        page.waitForSelector('table', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('tbody', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('div:has-text("Mañana")', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('div:has-text("Tarde")', { timeout: 15000, state: 'visible' })
+      ]);
+      
+      // Esperar un poco más para asegurar que todos los elementos interactivos están disponibles
+      await page.waitForTimeout(1000);
+    } catch (error) {
+      console.error('Error esperando a que la tabla se cargue:', error);
+      // Capturar screenshot para depuración
+      await page.screenshot({ path: './test-results/table-loading-error-responsable.png' });
+      throw new Error('No se pudo cargar la tabla de turnos a tiempo');
+    }
     
     // Verificar si hay algún turno ya asignado (texto "(Tú)")
     const alreadyAssigned = await page.locator('text="(Tú)"').count() > 0;
@@ -216,8 +248,24 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
     
-    // Esperar a que cargue el contenido de la programación
-    await page.waitForSelector('table', { timeout: 10000 });
+    // Estrategia mejorada para esperar que cargue el contenido de la programación
+    try {
+      // Intentar múltiples selectores para identificar cuando la tabla ha cargado
+      await Promise.race([
+        page.waitForSelector('table', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('tbody', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('div:has-text("Mañana")', { timeout: 15000, state: 'visible' }),
+        page.waitForSelector('div:has-text("Tarde")', { timeout: 15000, state: 'visible' })
+      ]);
+      
+      // Esperar un poco más para asegurar que todos los elementos interactivos están disponibles
+      await page.waitForTimeout(1000);
+    } catch (error) {
+      console.error('Error esperando a que la tabla se cargue:', error);
+      // Capturar screenshot para depuración
+      await page.screenshot({ path: './test-results/table-loading-error-voluntario.png' });
+      throw new Error('No se pudo cargar la tabla de turnos a tiempo');
+    }
     
     // Verificar si hay algún turno ya asignado (texto "(Tú)")
     const alreadyAssigned = await page.locator('text="(Tú)"').count() > 0;

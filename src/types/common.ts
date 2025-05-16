@@ -27,3 +27,7 @@ export interface CurrentUser extends Omit<FirebaseUser, "providerData"> {
   isEnabled: boolean;
 }
 
+export interface HeaderProps {
+  userRoles: string[];
+}
+

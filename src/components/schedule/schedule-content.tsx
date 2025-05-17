@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { format, isValid } from "date-fns";
 import { ScheduleContentProps } from "@/app/schedule/page";
 import { useScheduleContent } from "@/hooks/use-schedule-content";
@@ -61,6 +61,10 @@ export default function ScheduleContent({
     handleTabChange,
     daysToDisplay,
     shouldShowLoader,
+    isLoadingMoreDays,
+    shouldLoadMoreDays,
+    setVisibleDaysCount,
+    allDaysToDisplay,
 
     // Helpers
     isContentLoading,
@@ -69,6 +73,16 @@ export default function ScheduleContent({
     startDate,
     endDate,
   });
+
+  // Función para manejar la intersección visible del loader
+  const handleLoaderIntersection = useCallback(() => {
+    if (!isLoadingMoreDays && shouldLoadMoreDays()) {
+      // Añadir 7 días más o hasta el máximo disponible
+      setTimeout(() => {
+        setVisibleDaysCount(prev => Math.min(prev + 7, allDaysToDisplay.length));
+      }, 400);
+    }
+  }, [isLoadingMoreDays, shouldLoadMoreDays, setVisibleDaysCount, allDaysToDisplay.length]);
 
   // Manejo de errores
   if (authError || shiftsError) {
@@ -132,8 +146,14 @@ export default function ScheduleContent({
           })}
         </Box>
 
-        {/* Indicador de carga infinita */}
-        <InfiniteScrollLoader isVisible={shouldShowLoader} />
+        {/* Indicador de carga infinita con detector de intersección */}
+        <InfiniteScrollLoader 
+          isVisible={shouldShowLoader} 
+          onIntersect={handleLoaderIntersection} 
+        />
+        
+        {/* Espacio adicional al final para PWA */}
+        <Box sx={{ height: '100px' }} />
       </Box>
 
       {/* Diálogos */}

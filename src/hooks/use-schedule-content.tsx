@@ -65,6 +65,10 @@ export interface UseScheduleContentResult {
   daysToDisplay: Date[];
   isLoadingMoreDays: boolean;
   shouldShowLoader: boolean;
+  shouldLoadMoreDays: () => boolean;
+  visibleDaysCount: number;
+  setVisibleDaysCount: React.Dispatch<React.SetStateAction<number>>;
+  allDaysToDisplay: Date[];
   dateRange: Date[];
   endDate: Date;
 
@@ -313,7 +317,7 @@ export function useScheduleContent({
     snackbarSeverity: uiSnackbarSeverity,
     showSnackbar: showUiSnackbar, 
     handleSnackbarClose: handleUiSnackbarClose, 
-
+    
     endDate: scheduleUI.safeEndDate,
 
     isLoading,

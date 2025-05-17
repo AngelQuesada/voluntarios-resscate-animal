@@ -92,7 +92,7 @@ export function useShiftActions({
           const monthName = dateParts[3];
           
           dateParts[0] = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-          dateParts[3] = monthName.toUpperCase();
+          dateParts[3] = monthName.charAt(0).toUpperCase() + monthName.slice(1);
           formattedDate = dateParts.join(' ');
       }
 

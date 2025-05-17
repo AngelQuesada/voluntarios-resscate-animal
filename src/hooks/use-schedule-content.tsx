@@ -103,6 +103,8 @@ export function useScheduleContent({
   
   const { currentUser, authLoading, error: authError } = useAuthUserStatus({ showSnackbar: showUiSnackbar });
 
+  const isMobile = useIsMobile();
+
   const startDateISO = useMemo(() => startDate.toISOString(), [startDate]);
   const safeEndDate = useMemo(() =>
     initialEndDate && !isNaN(initialEndDate.getTime()) ? initialEndDate : new Date(new Date(startDate).setDate(startDate.getDate() + 6))
@@ -148,7 +150,6 @@ export function useScheduleContent({
 
 
   const getShiftDisplayName = (shiftKey: "M" | "T"): string => {
-    const isMobile = useIsMobile();
     return isMobile ? shiftKey : (shiftKey === "M" ? "Mañana" : "Tarde");
   };
 

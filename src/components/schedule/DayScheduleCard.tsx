@@ -19,6 +19,7 @@ interface DayScheduleCardProps {
   handleAddUserButtonClick: (dateKey: string, shiftKey: "M" | "T") => void;
   handleRemoveUserClick: (assignment: ShiftAssignment, dateKey: string, shiftKey: "M" | "T") => void;
   handleVolunteerClick: (volunteer: ShiftAssignment) => Promise<void>;
+  activeTab?: number;
 }
 
 const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
@@ -33,12 +34,28 @@ const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
   handleAddUserButtonClick,
   handleRemoveUserClick,
   handleVolunteerClick,
+  activeTab = 0,
 }) => {
   const dayAssignments = processedAssignments[dayKey] || { M: [], T: [] };
   
   // Formatos de fecha
   const dayOfWeek = format(date, 'EEEE', { locale: es });
   const formattedDate = format(date, 'd MMMM', { locale: es });
+
+  // Determinamos qué turnos debemos mostrar
+  const shiftsToShow = React.useMemo(() => {
+    // En la pestaña "Todos los turnos", mostramos siempre ambos
+    if (activeTab === 0) return ['M', 'T'];
+    
+    // En la pestaña "Mis turnos", solo mostramos aquellos turnos donde el usuario está asignado
+    if (activeTab === 1 && currentUser) {
+      return Object.keys(dayAssignments).filter(shiftKey => 
+        dayAssignments[shiftKey as "M" | "T"]?.some(a => a.uid === currentUser.uid)
+      ) as ("M" | "T")[];
+    }
+    
+    return ['M', 'T'];
+  }, [activeTab, currentUser, dayAssignments]);
 
   return (
     <Paper 
@@ -73,7 +90,7 @@ const DayScheduleCard: React.FC<DayScheduleCardProps> = ({
       
       <Divider sx={{ my: 1 }} />
       
-      {['M', 'T'].map((shiftKey) => (
+      {shiftsToShow.map((shiftKey) => (
         <ShiftRow
           key={`${dayKey}_${shiftKey}`}
           dayKey={dayKey}

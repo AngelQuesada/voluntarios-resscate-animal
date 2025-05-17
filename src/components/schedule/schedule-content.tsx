@@ -4,7 +4,7 @@ import React, { useCallback } from "react";
 import { format, isValid } from "date-fns";
 import { ScheduleContentProps } from "@/app/schedule/page";
 import { useScheduleContent } from "@/hooks/use-schedule-content";
-import { Box, Alert } from "@mui/material";
+import { Box, Alert, Paper, Typography, Divider, Grid } from "@mui/material";
 import ConfirmAssignmentDialog from "./ConfirmAssignmentDialog";
 import NotificationSnackbar from "./NotificationSnackbar";
 import ContactDialog from "./ContactDialog";
@@ -12,8 +12,9 @@ import ConfirmRemoveUserDialog from "./ConfirmRemoveUserDialog";
 import AddUserToShiftDialog from "./AddUserToShiftDialog";
 import ScheduleTabsComponent from "./ScheduleTabsComponent";
 import LoadingScreen from "./LoadingScreen";
-import DayScheduleCard from "./DayScheduleCard";
 import InfiniteScrollLoader from "./InfiniteScrollLoader";
+import ShiftRow from "./ShiftRow";
+import { es } from 'date-fns/locale';
 
 export default function ScheduleContent({
   startDate,
@@ -99,6 +100,170 @@ export default function ScheduleContent({
     return <Alert severity="error">Fechas de inicio o fin inválidas.</Alert>;
   }
 
+  // Renderizar un día para la pestaña "Todos los turnos"
+  const renderAllShiftsDay = (date: Date) => {
+    const dateKey = format(date, "yyyy-MM-dd");
+    const dayAssignments = processedAssignments[dateKey] || { M: [], T: [] };
+    const dayOfWeek = format(date, 'EEEE', { locale: es });
+    const formattedDate = format(date, 'd MMMM', { locale: es });
+    
+    return (
+      <Paper 
+        key={dateKey}
+        elevation={1} 
+        sx={{ 
+          p: 2, 
+          mb: 2, 
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Box sx={{ mb: 1 }}>
+          <Typography 
+            variant="h6" 
+            component="h3" 
+            sx={{ 
+              textTransform: 'capitalize',
+              fontWeight: 'bold',
+            }}
+          >
+            {dayOfWeek}
+          </Typography>
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ textTransform: 'capitalize' }}
+          >
+            {formattedDate}
+          </Typography>
+        </Box>
+        
+        <Divider sx={{ my: 1 }} />
+        
+        {/* Turno de Mañana */}
+        <ShiftRow
+          key={`${dateKey}_M`}
+          dayKey={dateKey}
+          shiftKey="M"
+          shiftDisplayName={getShiftDisplayName("M")}
+          currentUser={currentUser}
+          assignments={dayAssignments["M"] || []}
+          usersMap={usersMap}
+          isLoading={isUpdatingShift[`${dateKey}_M_${currentUser?.uid || ''}`] || false}
+          initiateShiftAction={initiateShiftAction}
+          onAddUserClick={handleAddUserButtonClick}
+          onRemoveUserClick={handleRemoveUserClick}
+          onVolunteerClick={handleVolunteerClick}
+        />
+        
+        {/* Turno de Tarde */}
+        <ShiftRow
+          key={`${dateKey}_T`}
+          dayKey={dateKey}
+          shiftKey="T"
+          shiftDisplayName={getShiftDisplayName("T")}
+          currentUser={currentUser}
+          assignments={dayAssignments["T"] || []}
+          usersMap={usersMap}
+          isLoading={isUpdatingShift[`${dateKey}_T_${currentUser?.uid || ''}`] || false}
+          initiateShiftAction={initiateShiftAction}
+          onAddUserClick={handleAddUserButtonClick}
+          onRemoveUserClick={handleRemoveUserClick}
+          onVolunteerClick={handleVolunteerClick}
+        />
+      </Paper>
+    );
+  };
+
+  // Renderizar un día para la pestaña "Mis Turnos"
+  const renderMyShiftsDay = (date: Date) => {
+    const dateKey = format(date, "yyyy-MM-dd");
+    const dayAssignments = processedAssignments[dateKey] || { M: [], T: [] };
+    const dayOfWeek = format(date, 'EEEE', { locale: es });
+    const formattedDate = format(date, 'd MMMM', { locale: es });
+    
+    // Solo procesar si el usuario está asignado a algún turno de este día
+    const userInMorningShift = dayAssignments.M?.some(a => a.uid === currentUser?.uid) || false;
+    const userInAfternoonShift = dayAssignments.T?.some(a => a.uid === currentUser?.uid) || false;
+    
+    if (!userInMorningShift && !userInAfternoonShift) {
+      return null;
+    }
+    
+    return (
+      <Paper 
+        key={dateKey}
+        elevation={1} 
+        sx={{ 
+          p: 2, 
+          mb: 2, 
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Box sx={{ mb: 1 }}>
+          <Typography 
+            variant="h6" 
+            component="h3" 
+            sx={{ 
+              textTransform: 'capitalize',
+              fontWeight: 'bold',
+            }}
+          >
+            {dayOfWeek}
+          </Typography>
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ textTransform: 'capitalize' }}
+          >
+            {formattedDate}
+          </Typography>
+        </Box>
+        
+        <Divider sx={{ my: 1 }} />
+        
+        {/* Solo mostrar turno de mañana si el usuario está asignado */}
+        {userInMorningShift && (
+          <ShiftRow
+            key={`${dateKey}_M`}
+            dayKey={dateKey}
+            shiftKey="M"
+            shiftDisplayName={getShiftDisplayName("M")}
+            currentUser={currentUser}
+            assignments={dayAssignments["M"] || []}
+            usersMap={usersMap}
+            isLoading={isUpdatingShift[`${dateKey}_M_${currentUser?.uid || ''}`] || false}
+            initiateShiftAction={initiateShiftAction}
+            onAddUserClick={handleAddUserButtonClick}
+            onRemoveUserClick={handleRemoveUserClick}
+            onVolunteerClick={handleVolunteerClick}
+          />
+        )}
+        
+        {/* Solo mostrar turno de tarde si el usuario está asignado */}
+        {userInAfternoonShift && (
+          <ShiftRow
+            key={`${dateKey}_T`}
+            dayKey={dateKey}
+            shiftKey="T"
+            shiftDisplayName={getShiftDisplayName("T")}
+            currentUser={currentUser}
+            assignments={dayAssignments["T"] || []}
+            usersMap={usersMap}
+            isLoading={isUpdatingShift[`${dateKey}_T_${currentUser?.uid || ''}`] || false}
+            initiateShiftAction={initiateShiftAction}
+            onAddUserClick={handleAddUserButtonClick}
+            onRemoveUserClick={handleRemoveUserClick}
+            onVolunteerClick={handleVolunteerClick}
+          />
+        )}
+      </Paper>
+    );
+  };
+
   return (
     <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
       <Box sx={{ maxWidth: "800px", width: "100%" }}>
@@ -111,39 +276,15 @@ export default function ScheduleContent({
 
         {/* Listado de días */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {daysToDisplay.map((date) => {
-            const dateKey = format(date, "yyyy-MM-dd");
-            
-            // Filtrar días en "Mis turnos" que no tienen asignaciones del usuario
-            if (activeTab === 1 && currentUser) {
-              const dayAssignments = processedAssignments[dateKey];
-              const userHasShiftsThisDay = dayAssignments 
-                ? (dayAssignments.M?.some(a => a.uid === currentUser.uid) || 
-                   dayAssignments.T?.some(a => a.uid === currentUser.uid))
-                : false;
-                
-              if (!userHasShiftsThisDay) {
-                return null;
-              }
-            }
-
-            return (
-              <DayScheduleCard
-                key={dateKey}
-                date={date}
-                dayKey={dateKey}
-                currentUser={currentUser}
-                processedAssignments={processedAssignments}
-                usersMap={usersMap}
-                isUpdatingShift={isUpdatingShift}
-                initiateShiftAction={initiateShiftAction}
-                getShiftDisplayName={getShiftDisplayName}
-                handleAddUserButtonClick={handleAddUserButtonClick}
-                handleRemoveUserClick={handleRemoveUserClick}
-                handleVolunteerClick={handleVolunteerClick}
-              />
-            );
-          })}
+          {activeTab === 0 ? (
+            // Vista de "Todos los turnos"
+            daysToDisplay.map(date => renderAllShiftsDay(date))
+          ) : (
+            // Vista de "Mis turnos"
+            daysToDisplay
+              .map(date => renderMyShiftsDay(date))
+              .filter(Boolean)
+          )}
         </Box>
 
         {/* Indicador de carga infinita con detector de intersección */}

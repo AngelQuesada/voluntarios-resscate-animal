@@ -150,6 +150,7 @@ export function useScheduleContent({
 
 
   const getShiftDisplayName = (shiftKey: "M" | "T"): string => {
+    const isMobile = useIsMobile();
     return isMobile ? shiftKey : (shiftKey === "M" ? "Mañana" : "Tarde");
   };
 

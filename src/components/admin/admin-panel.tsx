@@ -93,6 +93,7 @@ export function AdminPanel() {
     isDeleteDialogOpen,
     isEditDialogOpen,
     isAddingUser,
+    isDeletingUser,
     setIsEditDialogOpen,
     editUserInfo,
     setEditUserInfo,
@@ -506,7 +507,7 @@ export function AdminPanel() {
 
         <Backdrop
           sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
-          open={isAddingUser}
+          open={isAddingUser || isDeletingUser}
         >
           <CircularProgress color="inherit" />
         </Backdrop>

@@ -33,6 +33,7 @@ interface NewUserInfoState {
 
 export const useAdminPanel = () => {
   const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -314,6 +315,7 @@ export const useAdminPanel = () => {
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
     setDeleteError(null);
+    setIsDeletingUser(true);
 
     try {
       // 1. Llamar a la API para eliminar el usuario de Firebase Auth
@@ -339,6 +341,8 @@ export const useAdminPanel = () => {
     } catch (error: any) {
       console.error('Error deleting user:', error);
       setDeleteError(error.message || 'Error al eliminar el usuario. Verifica la consola.');
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -485,5 +489,6 @@ export const useAdminPanel = () => {
     handleEnabledSwitchChange,
     handleEditEnabledSwitchChange,
     isAddingUser,
+    isDeletingUser,
   };
 };

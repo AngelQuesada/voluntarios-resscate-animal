@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getAuth } from 'firebase-admin/auth';
+import { initAdmin } from '@/lib/firebaseAdmin';
 
 interface RequestContext {
   params: {
@@ -29,6 +31,37 @@ export async function GET(
     console.error('Error al obtener el usuario:', error);
     return NextResponse.json(
       { error: 'Error al obtener el usuario', message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: RequestContext
+) {
+  try {
+    initAdmin();
+
+    await getAuth().deleteUser(params.uid);
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Usuario eliminado correctamente' 
+    });
+  } catch (error: any) {
+    console.error('Error al eliminar el usuario:', error);
+    
+    // Verificar si el error es porque el usuario no existe
+    if (error.code === 'auth/user-not-found') {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado', message: 'El usuario no existe en Firebase Authentication' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Error al eliminar el usuario', message: error.message },
       { status: 500 }
     );
   }

@@ -316,18 +316,17 @@ export const useAdminPanel = () => {
     setDeleteError(null);
 
     try {
-      // 1. Llamar a la función de backend para eliminar el usuario de Firebase Auth
-      const response = await fetch('/api/delete-user', {
-        method: 'POST',
+      // 1. Llamar a la API para eliminar el usuario de Firebase Auth
+      const response = await fetch(`/api/users/${userToDelete.uid}`, {
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ uid: userToDelete.uid }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al eliminar usuario de Auth');
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+        throw new Error(errorData.message || `Error al eliminar usuario de Auth: ${response.status}`);
       }
 
       // 2. Eliminar el documento del usuario de Firestore

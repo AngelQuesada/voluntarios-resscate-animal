@@ -26,7 +26,7 @@ export default function RootLayout({
         <link rel="icon" href="/icons/favicon-32x32.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Rescate Animal" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
@@ -34,10 +34,15 @@ export default function RootLayout({
         <meta name="application-name" content="Rescate Animal Voluntariado" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="display" content="fullscreen" />
+        {/* Eliminamos esta meta que fuerza fullscreen */}
+        {/* <meta name="display" content="fullscreen" /> */}
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="full-screen" content="yes" />
+        {/* Eliminamos esta meta */}
+        {/* <meta name="full-screen" content="yes" /> */}
         <meta name="browsermode" content="application" />
+        {/* Agregamos meta para control explícito de la barra de estado en Android */}
+        <meta name="apple-mobile-web-app-status-bar" content="default" />
+        <meta name="standalone" content="yes" />
       </head>
       <body suppressHydrationWarning={true} className={inter.className}>
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
@@ -99,49 +104,30 @@ export default function RootLayout({
               setVH();
             });
             
-            // Intentar forzar pantalla completa en Android 
+            // Modificamos esta función para NO forzar pantalla completa en Android 
+            // Ya que esto puede ocultar la barra de estado
             function tryFullscreen() {
               const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
                                   window.matchMedia('(display-mode: fullscreen)').matches;
               const isAndroid = /android/i.test(navigator.userAgent);
               
               if ((isStandalone || document.referrer.includes('android-app://')) && isAndroid) {
-                // Intentar API de pantalla completa de Fullscreen API estándar
-                if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-                  document.documentElement.requestFullscreen().catch(err => {
-                    console.log('Error al intentar pantalla completa vía API estándar:', err);
-                  });
-                }
-                // Tratar también con las APIs específicas de navegador
-                else if (document.documentElement.webkitRequestFullscreen) {
-                  document.documentElement.webkitRequestFullscreen();
-                }
-                else if (document.documentElement.mozRequestFullScreen) {
-                  document.documentElement.mozRequestFullScreen();
-                }
-                else if (document.documentElement.msRequestFullscreen) {
-                  document.documentElement.msRequestFullscreen();
-                }
-                
-                // Forzar estilos específicos para Android en pantalla completa
+                // Forzar estilos específicos para Android en modo standalone
+                // sin forzar pantalla completa para mantener la barra de estado
                 if (document.body.classList.contains('pwa-mode')) {
                   document.documentElement.style.setProperty('height', '100%', 'important');
                   document.documentElement.style.setProperty('width', '100%', 'important');
-                  document.documentElement.style.setProperty('position', 'fixed', 'important');
-                  document.documentElement.style.setProperty('overflow', 'hidden', 'important');
+                  document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                  // Evitamos fijar la posición para permitir scroll
+                  document.documentElement.style.setProperty('position', 'relative', 'important');
                 }
               }
             }
             
-            // Escuchar eventos que podrían desencadenar pantalla completa
-            ['load', 'click', 'touchstart', 'focus'].forEach(evt => {
+            // Escuchar eventos que podrían desencadenar los ajustes de estilo
+            ['load', 'resize'].forEach(evt => {
               window.addEventListener(evt, tryFullscreen, {once: false});
             });
-            
-            // Verificar periodicamente el estado de pantalla completa en Android
-            if (/android/i.test(navigator.userAgent)) {
-              setInterval(tryFullscreen, 1000);
-            }
           `}
         </Script>
       </body>

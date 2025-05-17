@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   themeColor: "#ffffff",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "default", // Asegura que la barra de estado sea visible en iOS
     title: "Rescate Animal",
     startupImage: [
       {
@@ -24,5 +24,12 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: true,
+  },
+  // Asegurar metaetiquetas adicionales para control de la barra de estado
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'theme-color': '#ffffff',
   },
 };

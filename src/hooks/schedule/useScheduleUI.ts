@@ -22,6 +22,7 @@ export interface ScheduleUI {
   handleTabChange: (event: React.SyntheticEvent, newValue: number) => void;
   initialTabLogicApplied: boolean;
   setInitialTabLogicApplied: React.Dispatch<React.SetStateAction<boolean>>;
+  setVisibleDaysCount: React.Dispatch<React.SetStateAction<number>>;
   visibleDaysCount: number;
   isLoadingMoreDays: boolean;
   allDaysToDisplay: Date[];
@@ -194,7 +195,8 @@ export function useScheduleUI({
       
       const scrollPosition = window.innerHeight + window.scrollY;
       const bodyHeight = document.body.offsetHeight;
-      const scrollThreshold = bodyHeight - 100; 
+      const isPWA = document.documentElement.classList.contains('pwa-mode');
+      const scrollThreshold = bodyHeight - (isPWA ? 300 : 200);
               
       if (scrollPosition >= scrollThreshold) {
         setIsLoadingMoreDays(true);
@@ -206,8 +208,19 @@ export function useScheduleUI({
     };
   
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLoadingMoreDays, allDaysToDisplay.length, visibleDaysCount, shouldLoadMoreDays]); // Añadido shouldLoadMoreDays
+    
+    const pwaScrollContainers = document.querySelectorAll('.pwa-mode');
+    pwaScrollContainers.forEach(container => {
+      container.addEventListener('scroll', handleScroll);
+    });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      pwaScrollContainers.forEach(container => {
+        container.removeEventListener('scroll', handleScroll);
+      });
+    };
+  }, [isLoadingMoreDays, allDaysToDisplay.length, visibleDaysCount, shouldLoadMoreDays]);
 
   const shouldShowLoader = useMemo(() => {
     return isLoadingMoreDays || (shouldLoadMoreDays() && visibleDaysCount < allDaysToDisplay.length);
@@ -231,6 +244,7 @@ export function useScheduleUI({
     selectedVolunteer,
     contactDialogOpen,
     setContactDialogOpen,
+    setVisibleDaysCount,
     handleVolunteerClick,
     activeTab,
     handleTabChange,

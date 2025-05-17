@@ -9,6 +9,7 @@ import { useShiftActions } from "./schedule/useShiftActions";
 import { useScheduleUI } from "./schedule/useScheduleUI";
 import { ShiftAssignment } from "@/store/api/shiftsApi";
 import { CurrentUser, User } from "@/types/common";
+import { useIsMobile } from "./use-mobile";
 
 interface UseScheduleContentOptions {
   startDate?: Date;
@@ -147,7 +148,8 @@ export function useScheduleContent({
 
 
   const getShiftDisplayName = (shiftKey: "M" | "T"): string => {
-    return shiftKey === "M" ? "Mañana" : "Tarde";
+    const isMobile = useIsMobile();
+    return isMobile ? shiftKey : (shiftKey === "M" ? "Mañana" : "Tarde");
   };
 
   const isLoading = authLoading || shiftsLoading || userShiftsLoading || usersLoading;

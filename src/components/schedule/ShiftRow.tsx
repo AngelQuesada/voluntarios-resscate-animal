@@ -90,7 +90,7 @@ const ShiftRow: React.FC<ShiftRowProps> = ({
     <Box sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
       <Grid container alignItems="center" spacing={1}>
         {/* Columna de la izquierda: Título del turno y estatus */}
-        <Grid item xs={3} sm={2} md={2}>
+        <Grid item xs={2} sm={3} md={2}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             {renderStatusIcon()}
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -100,7 +100,7 @@ const ShiftRow: React.FC<ShiftRowProps> = ({
         </Grid>
         
         {/* Columna del centro: Lista de asignaciones */}
-        <Grid item xs={7} sm={8} md={9}>
+        <Grid item xs={9} sm={8} md={9}>
           <ShiftAssignmentList
             assignments={assignments}
             currentUser={currentUser}
@@ -114,7 +114,7 @@ const ShiftRow: React.FC<ShiftRowProps> = ({
         </Grid>
         
         {/* Columna de la derecha: Botón de acción */}
-        <Grid item xs={2} sm={2} md={1}>
+        <Grid item xs={1} sm={2} md={2}>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
             {isLoading ? (
               <CircularProgress size={24} />

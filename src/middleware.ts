@@ -1,14 +1,51 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Temporalmente deshabilitamos toda la lógica del middleware
-// Solo dejamos que todas las peticiones continúen normalmente
+// Define todas las rutas protegidas y sus requisitos de roles
+const protectedRoutes = {
+  '/schedule': { requiresAuth: true, roles: [] },
+  '/admin': { requiresAuth: true, roles: [3] },
+  '/admin/history': { requiresAuth: true, roles: [3] },
+}
+
 export function middleware(request: NextRequest) {
-  // Simplemente permitimos todas las solicitudes sin redirecciones
+  // Verificar si el usuario está autenticado revisando las cookies
+  const authToken = request.cookies.get('auth-token')
+  
+  // Examinar todas las cookies para encontrar tokens relacionados con Firebase Auth
+  const hasFirebaseAuthCookie = Array.from(request.cookies.getAll())
+    .some(cookie => 
+      cookie.name.includes('firebase') || 
+      cookie.name.includes('auth') ||
+      cookie.name === 'auth-token'
+    );
+
+  const isAuthenticated = !!(authToken || hasFirebaseAuthCookie);
+
+  const pathname = request.nextUrl.pathname;
+
+  if (!isAuthenticated) {
+    const isProtectedRoute = Object.keys(protectedRoutes).some(route => 
+      pathname === route || pathname.startsWith(`${route}/`)
+    );
+    
+    if (isProtectedRoute) {
+      console.log('Usuario no autenticado intentando acceder a ruta protegida, redirigiendo a login');
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
+  else if (isAuthenticated && pathname === '/') {
+    console.log('Usuario autenticado detectado en página de login, redirigiendo a /schedule');
+    return NextResponse.redirect(new URL('/schedule', request.url));
+  }
+
   return NextResponse.next();
 }
 
-// Mantenemos el matcher para que el middleware siga procesando las mismas rutas
+// Definir las rutas en las que el middleware debe ejecutarse
 export const config = {
-  matcher: ['/', '/schedule', '/admin']
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|icon.png|manifest.json|images|public).*)',
+  ],
 }

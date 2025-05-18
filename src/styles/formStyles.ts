@@ -30,6 +30,7 @@ export const containerStyles = {
   justifyContent: "center",
   alignItems: "center",
   transform: "translateY(-10%)",
+  backgroundColor: "#ffffff",
 };
 
 export const paperStyles = {
@@ -38,4 +39,7 @@ export const paperStyles = {
   flexDirection: "column",
   alignItems: "center",
   padding: 4,
+  backgroundColor: "#ffffff",
+  border: "1px solid rgba(0, 0, 0, 0.1)",
+  borderRadius: 2,
 };

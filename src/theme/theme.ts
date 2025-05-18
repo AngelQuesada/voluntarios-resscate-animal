@@ -12,7 +12,7 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     background: {
-      default: '#F9FAFB',
+      default: '#FFFFFF',
       paper: '#FFFFFF',
     },
     text: {

@@ -7,7 +7,7 @@ import RoleProtected from "@/components/auth/RoleProtected";
 export default function AdminPage() {
   return (
     <RoleProtected requiredRoles={[UserRoles.ADMINISTRADOR]} fallbackUrl="/schedule">
-      <main className="flex justify-center items-center h-screen bg-background">
+      <main className="flex justify-center items-center h-screen bg-white">
         <AdminPanel />
       </main>
     </RoleProtected>

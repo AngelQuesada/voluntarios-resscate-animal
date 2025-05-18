@@ -24,6 +24,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" href="/icons/favicon-32x32.png" />
+        <link rel="stylesheet" href="/splash-styles.css" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Rescate Animal" />
         <meta name="apple-mobile-web-app-status-bar-style" content="white" />
@@ -38,6 +39,11 @@ export default function RootLayout({
         <meta name="standalone" content="yes" />
       </head>
       <body suppressHydrationWarning={true} className={inter.className}>
+        {/* Añadir div para el splash screen personalizado */}
+        <div id="splash-screen">
+          <img src="/logo.png" alt="Rescate Animal Granada" className="app-icon" />
+        </div>
+
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
           <ThemeProvider theme={theme}>
             <CssBaseline />
@@ -76,6 +82,24 @@ export default function RootLayout({
             // También escuchar cambios en el modo de visualización
             window.matchMedia('(display-mode: standalone)').addEventListener('change', checkDisplayMode);
             window.matchMedia('(display-mode: fullscreen)').addEventListener('change', checkDisplayMode);
+          `}
+        </Script>
+        <Script id="splash-screen-handler">
+          {`
+            // Ocultar el splash screen después de que la aplicación haya cargado
+            window.addEventListener('load', () => {
+              // Dar un pequeño retraso para asegurar que todo ha cargado
+              setTimeout(() => {
+                const splashScreen = document.getElementById('splash-screen');
+                if (splashScreen) {
+                  splashScreen.classList.add('splash-hidden');
+                  // Remover completamente después de la transición
+                  setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                  }, 500);
+                }
+              }, 1000);
+            });
           `}
         </Script>
         <Script id="mobile-vh-fix">

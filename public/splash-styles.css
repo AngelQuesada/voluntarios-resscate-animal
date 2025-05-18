@@ -1,0 +1,43 @@
+/* Estilos para la pantalla de splash en Android */
+#splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+#splash-screen img {
+  width: 200px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+  clip-path: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Ocultar splash screen después de que la app cargue */
+.splash-hidden {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+  pointer-events: none;
+}
+
+/* Prevenir cualquier recorte automático por parte del navegador */
+@media screen and (display-mode: standalone),
+screen and (display-mode: fullscreen),
+screen and (display-mode: minimal-ui) {
+  .app-icon {
+    border-radius: 0 !important;
+    clip-path: none !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+  }
+}

@@ -1,6 +1,14 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip, Switch, FormControlLabel } from "@mui/material";
 import { UserRoles } from "@/lib/constants";
+
+// Función para validar formato de número de teléfono español
+const isValidPhone = (phone: string): boolean => {
+  if (!phone) return true; // Campo vacío se maneja en otra validación
+  // Regex para validar números españoles
+  const phoneRegex = /^(\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$/;
+  return phoneRegex.test(phone);
+};
 
 // Definir las opciones de roles para el Autocomplete, incluyendo el color
 export const roleOptions = [
@@ -23,6 +31,18 @@ const UserForm: React.FC<UserFormProps> = ({
   isAddMode = false,
   handleEnabledSwitchChange 
 }) => {
+  // Estado local para la validación del teléfono
+  const [phoneError, setPhoneError] = useState<boolean>(false);
+
+  // Efecto para validar el teléfono cuando cambia
+  useEffect(() => {
+    if (userData.phone) {
+      setPhoneError(!isValidPhone(userData.phone));
+    } else {
+      setPhoneError(false);
+    }
+  }, [userData.phone]);
+
   return (
     <>
       <TextField
@@ -99,18 +119,37 @@ const UserForm: React.FC<UserFormProps> = ({
         required
       />
       {isAddMode && (
-        <TextField
-          margin="dense"
-          name="password"
-          label="Contraseña"
-          type="password"
-          fullWidth
-          variant="outlined"
-          value={userData.password}
-          onChange={handleChange}
-          required
-          helperText="Mínimo 6 caracteres."
-        />
+        <>
+          <TextField
+            margin="dense"
+            name="password"
+            label="Contraseña"
+            type="password"
+            fullWidth
+            variant="outlined"
+            value={userData.password}
+            onChange={handleChange}
+            required
+            helperText="Mínimo 6 caracteres."
+          />
+          <TextField
+            margin="dense"
+            name="passwordConfirm"
+            label="Confirmar Contraseña"
+            type="password"
+            fullWidth
+            variant="outlined"
+            value={userData.passwordConfirm || ""}
+            onChange={handleChange}
+            required
+            error={userData.password !== (userData.passwordConfirm || "")}
+            helperText={
+              userData.password !== (userData.passwordConfirm || "") 
+                ? "Las contraseñas no coinciden" 
+                : "Repite la contraseña para confirmar."
+            }
+          />
+        </>
       )}
       <TextField
         margin="dense"
@@ -122,6 +161,13 @@ const UserForm: React.FC<UserFormProps> = ({
         value={userData.phone}
         onChange={handleChange}
         required
+        error={phoneError}
+        helperText={phoneError ? "Formato de teléfono inválido. Usa formato: 6XXXXXXXX, +34 6XXXXXXXX, etc." : ""}
+        InputProps={{
+          inputProps: {
+            pattern: "^(\\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$"
+          }
+        }}
       />
       <FormControl fullWidth margin="dense" variant="outlined">
         <FormLabel component="legend">Roles Adicionales</FormLabel>

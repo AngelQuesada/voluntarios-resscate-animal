@@ -4,6 +4,12 @@ import { db } from '@/lib/firebase';
 import { doc, setDoc, deleteDoc, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { UserRoles } from "@/lib/constants";
 
+// Función para validar formato de número de teléfono español
+const isValidPhone = (phone: string): boolean => {
+  const phoneRegex = /^(\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$/;
+  return phoneRegex.test(phone);
+};
+
 interface EditUserInfoState {
   username: string;
   roles: number[];
@@ -28,6 +34,7 @@ interface NewUserInfoState {
   job: string;
   location: string;
   password: string;
+  passwordConfirm?: string;
   isEnabled: boolean;
 }
 
@@ -155,6 +162,24 @@ export const useAdminPanel = () => {
       return;
     }
 
+    // Validar que las contraseñas coinciden
+    if (newUserInfo.password !== newUserInfo.passwordConfirm) {
+      setFormError('Las contraseñas no coinciden. Por favor, verifica ambas contraseñas.');
+      return;
+    }
+
+    // Validar longitud mínima de contraseña
+    if (newUserInfo.password.length < 6) {
+      setFormError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    // Validar formato de número de teléfono
+    if (!isValidPhone(newUserInfo.phone)) {
+      setFormError('El formato del número de teléfono no es válido. Asegúrate de usar un número español válido.');
+      return;
+    }
+
     setIsAddingUser(true);
 
     let finalRoles = [...(newUserInfo.roles || [])];
@@ -279,6 +304,12 @@ export const useAdminPanel = () => {
       !editUserInfo.phone
     ) {
       setFormError('Por favor, rellena todos los campos obligatorios.');
+      return;
+    }
+
+    // Validar formato de número de teléfono
+    if (!isValidPhone(editUserInfo.phone)) {
+      setFormError('El formato del número de teléfono no es válido. Asegúrate de usar un número español válido.');
       return;
     }
 

@@ -8,7 +8,6 @@ export const store = configureStore({
     [api.reducerPath]: api.reducer,
     [usersApi.reducerPath]: usersApi.reducer,
   },
-  // Agregar el middleware de la API habilita la caché, invalidación, sondeo y otras características
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       api.middleware,

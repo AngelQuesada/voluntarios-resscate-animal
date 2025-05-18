@@ -14,6 +14,7 @@ export interface ShiftActions {
   userToRemoveDetails: { uid: string; name: string; dateKey: string; shiftKey: "M" | "T" } | null;
   addUserDialogOpen: boolean;
   shiftForUserAssignment: { dateKey: string; shiftKey: "M" | "T" } | null;
+  isRemovingUser: boolean;
   executeModifyShift: (
     dateKey: string,
     shiftKey: "M" | "T",
@@ -56,6 +57,7 @@ export function useShiftActions({
   const [userToRemoveDetails, setUserToRemoveDetails] = useState<{ uid: string; name: string; dateKey: string; shiftKey: "M" | "T" } | null>(null);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [shiftForUserAssignment, setShiftForUserAssignment] = useState<{ dateKey: string; shiftKey: "M" | "T" } | null>(null);
+  const [isRemovingUser, setIsRemovingUser] = useState(false);
 
   const executeModifyShift = async (
     dateKey: string,
@@ -210,9 +212,14 @@ export function useShiftActions({
   const confirmRemoveUser = async () => {
     if (userToRemoveDetails && currentUser?.roles?.includes(UserRoles.ADMINISTRADOR)) {
       const { uid, name, dateKey, shiftKey } = userToRemoveDetails;
-      await executeModifyShift(dateKey, shiftKey, uid, name, 'remove');
-      setRemoveUserConfirmOpen(false);
-      setUserToRemoveDetails(null);
+      setIsRemovingUser(true);
+      try {
+        await executeModifyShift(dateKey, shiftKey, uid, name, 'remove');
+      } finally {
+        setIsRemovingUser(false);
+        setRemoveUserConfirmOpen(false);
+        setUserToRemoveDetails(null);
+      }
     }
   };
 
@@ -261,6 +268,7 @@ export function useShiftActions({
     userToRemoveDetails,
     addUserDialogOpen,
     shiftForUserAssignment,
+    isRemovingUser,
     executeModifyShift,
     initiateShiftAction,
     confirmShiftAction,

@@ -66,6 +66,7 @@ export interface ConfirmRemoveUserDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   userName?: string;
+  isLoading?: boolean;
 }
 
 export interface ContactDialogProps {

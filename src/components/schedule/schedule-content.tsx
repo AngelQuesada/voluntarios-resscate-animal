@@ -39,6 +39,7 @@ export default function ScheduleContent({
     userToRemoveDetails,
     addUserDialogOpen,
     shiftForUserAssignment,
+    isRemovingUser,
     initiateShiftAction,
     confirmShiftAction,
     cancelShiftAction,
@@ -317,6 +318,7 @@ export default function ScheduleContent({
         onClose={cancelRemoveUser}
         onConfirm={confirmRemoveUser}
         userName={userToRemoveDetails?.name}
+        isLoading={isRemovingUser}
       />
       
       <AddUserToShiftDialog

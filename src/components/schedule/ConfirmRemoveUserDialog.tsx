@@ -6,6 +6,7 @@ import {
   DialogContentText,
   DialogTitle,
   Button,
+  CircularProgress,
 } from "@mui/material";
 import { ConfirmRemoveUserDialogProps } from "./types";
 
@@ -14,9 +15,10 @@ const ConfirmRemoveUserDialog: React.FC<ConfirmRemoveUserDialogProps> = ({
   onClose,
   onConfirm,
   userName,
+  isLoading = false,
 }) => {
   return (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog open={open} onClose={onClose} disableEscapeKeyDown={isLoading}>
       <DialogTitle>Confirmar Eliminación</DialogTitle>
       <DialogContent>
         <DialogContentText>
@@ -26,11 +28,18 @@ const ConfirmRemoveUserDialog: React.FC<ConfirmRemoveUserDialogProps> = ({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} color="primary">
+        <Button onClick={onClose} color="primary" disabled={isLoading}>
           Cancelar
         </Button>
-        <Button onClick={onConfirm} color="error" variant="contained" autoFocus>
-          Eliminar
+        <Button
+          onClick={onConfirm}
+          color="error"
+          variant="contained"
+          autoFocus
+          disabled={isLoading}
+          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+        >
+          {isLoading ? 'Eliminando...' : 'Eliminar'}
         </Button>
       </DialogActions>
     </Dialog>

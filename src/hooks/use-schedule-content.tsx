@@ -41,6 +41,7 @@ export interface UseScheduleContentResult {
   userToRemoveDetails: { uid: string; name: string; dateKey: string; shiftKey: "M" | "T" } | null;
   addUserDialogOpen: boolean;
   shiftForUserAssignment: { dateKey: string; shiftKey: "M" | "T" } | null;
+  isRemovingUser: boolean;
   initiateShiftAction: (dateKey: string, shiftKey: "M" | "T") => Promise<void>;
   confirmShiftAction: () => Promise<void>;
   cancelShiftAction: () => void;

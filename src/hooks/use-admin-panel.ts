@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { User } from '../types/common';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, deleteDoc, getDocs, collection, updateDoc } from 'firebase/firestore';
@@ -89,6 +89,7 @@ export const useAdminPanel = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [prioritizeResponsables, setPrioritizeResponsables] = useState(false);
+  const [debounceSearchTerm, setDebounceSearchTerm] = useState(searchTerm);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -416,8 +417,18 @@ export const useAdminPanel = () => {
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-    setPage(0);
   };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebounceSearchTerm(searchTerm);
+      setPage(0);
+    }, 300); // Tiempo debounce
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const getRoleName = (level: number): string => {
     const roleMap: { [key: number]: string } = {
@@ -435,7 +446,7 @@ export const useAdminPanel = () => {
     let searchedUsers = usersToProcess.filter(user =>
       `${user.name} ${user.lastname} ${user.username} ${user.email || ''} ${(Array.isArray(user.roles) ? user.roles.map(r => getRoleName(r)).join(' ') : getRoleName(user.roles || UserRoles.VOLUNTARIO))}`
       .toLowerCase()
-      .includes(searchTerm.toLowerCase())
+      .includes(debounceSearchTerm.toLowerCase())
     );
 
     // Luego, ordenar según los criterios:
@@ -462,7 +473,7 @@ export const useAdminPanel = () => {
     });
 
     return searchedUsers;
-  }, [users, searchTerm, prioritizeResponsables]);
+  }, [users, debounceSearchTerm, prioritizeResponsables]);
 
   return {
     users,

@@ -42,4 +42,5 @@ export const paperStyles = {
   backgroundColor: "#ffffff",
   border: "1px solid rgba(0, 0, 0, 0.1)",
   borderRadius: 2,
+  boxShadow: 'none',
 };

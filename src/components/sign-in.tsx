@@ -21,7 +21,7 @@ const SignIn = () => {
   return (
     <Container component="main" maxWidth="xs" sx={containerStyles}>
       <CssBaseline />
-      <Paper elevation={6} sx={paperStyles}>
+      <Paper sx={paperStyles}>
         <Avatar sx={{ m: 1, bgcolor: "transparent", width: 75, height: 75 }}>
           <img
             src="/logo.png"

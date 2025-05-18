@@ -140,7 +140,6 @@ export const useAdminPanel = () => {
   };
 
   const handleAddUser = async () => {
-    setIsAddingUser(true);
     setFormError(null);
     if (
       !newUserInfo.username ||
@@ -156,7 +155,8 @@ export const useAdminPanel = () => {
       return;
     }
 
-    // Asegurarse de que el usuario tenga al menos el rol de Voluntario
+    setIsAddingUser(true);
+
     let finalRoles = [...(newUserInfo.roles || [])];
     if (!finalRoles.includes(UserRoles.VOLUNTARIO)) {
       finalRoles.push(UserRoles.VOLUNTARIO);

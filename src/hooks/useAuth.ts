@@ -4,6 +4,12 @@ import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 
+// Función para validar formato de email
+const isValidEmail = (email: string): boolean => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+};
+
 export function useAuth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,6 +20,28 @@ export function useAuth() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validaciones previas al inicio de sesión
+    if (!email.trim()) {
+      setError("Por favor, introduce tu correo electrónico.");
+      return;
+    }
+    
+    if (!isValidEmail(email)) {
+      setError("Por favor, introduce un correo electrónico válido.");
+      return;
+    }
+    
+    if (!password) {
+      setError("Por favor, introduce tu contraseña.");
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    
     setIsLoading(true);
 
     try {

@@ -1,13 +1,10 @@
 # Esquema de Base de Datos
 
-Este documento detalla la estructura de la base de datos utilizada en el Sistema de Gestión de Voluntariado para Rescate Animal. El sistema utiliza Firebase Firestore como base de datos NoSQL.
+Este documento describe la estructura de la base de datos utilizada en el Sistema de Gestión de Voluntariado para Rescate Animal.
 
-## Estructura general
+## Visión general
 
-La base de datos se organiza en tres colecciones principales:
-- `users`: Información de usuarios y sus roles
-- `shifts`: Información de turnos y asignaciones
-- `settings`: Configuraciones globales del sistema
+La aplicación utiliza Firebase Firestore, una base de datos NoSQL orientada a documentos. La estructura de datos está diseñada para optimizar las consultas más frecuentes y mantener la integridad de los datos.
 
 ## Colección: `users`
 
@@ -20,45 +17,25 @@ users/
       |-- email: string               # Email del usuario
       |-- photoURL: string            # URL de foto de perfil (opcional)
       |-- roles: array<number>        # Array de roles del usuario (1: Voluntario, 2: Responsable, 3: Administrador)
+      |-- role: number                # Rol principal del usuario (para compatibilidad - opcional)
       |-- createdAt: timestamp        # Fecha de creación de la cuenta
       |-- lastLogin: timestamp        # Última fecha de inicio de sesión
-      |-- isActive: boolean           # Estado del usuario (activo/inactivo)
+      |-- isEnabled: boolean          # Estado del usuario (habilitado/deshabilitado)
+      |-- isActive: boolean           # Estado del usuario (activo/inactivo - deprecated)
       |-- location: string            # Ubicación/ciudad del usuario (opcional)
       |-- occupation: string          # Ocupación del usuario (opcional)
-      |-- dateOfBirth: string         # Fecha de nacimiento (opcional, formato YYYY-MM-DD)
+      |-- phone: string               # Teléfono del usuario
+      |-- name: string                # Nombre del usuario
+      |-- lastname: string            # Apellido del usuario
+      |-- username: string            # Nombre de usuario
+      |-- birthdate: string           # Fecha de nacimiento (opcional, formato YYYY-MM-DD)
+      |-- job: string                 # Trabajo/ocupación del usuario (opcional)
 ```
 
-### Ejemplos
+### Índices requeridos
 
-```json
-{
-  "displayName": "Juan Pérez",
-  "email": "juan.perez@example.com",
-  "photoURL": "https://example.com/profile/juan.jpg",
-  "roles": [1],
-  "createdAt": "2023-05-15T10:30:00Z",
-  "lastLogin": "2023-06-01T08:45:00Z",
-  "isActive": true,
-  "location": "Madrid",
-  "occupation": "Estudiante",
-  "dateOfBirth": "1995-08-22"
-}
-```
-
-```json
-{
-  "displayName": "Ana García",
-  "email": "ana.garcia@example.com",
-  "photoURL": null,
-  "roles": [1, 3],
-  "createdAt": "2023-04-10T14:20:00Z",
-  "lastLogin": "2023-06-02T16:30:00Z",
-  "isActive": true,
-  "location": "Barcelona",
-  "occupation": "Veterinaria",
-  "dateOfBirth": "1988-03-15"
-}
-```
+- `roles`: Para consultas que filtran por rol
+- `isEnabled`: Para filtrar usuarios habilitados/deshabilitados
 
 ## Colección: `shifts`
 
@@ -66,47 +43,22 @@ users/
 
 ```
 shifts/
-  |-- {dateKey_shiftKey}/  # ID compuesto: YYYY-MM-DD_M o YYYY-MM-DD_T
-      |-- date: string                # Fecha del turno (formato YYYY-MM-DD)
-      |-- shift: string               # Identificador del turno (M: mañana, T: tarde)
-      |-- assignments: array<object>  # Array de voluntarios asignados
-          |-- uid: string                 # ID del usuario asignado (único campo almacenado)
-      |-- notes: string               # Notas adicionales para el turno (opcional)
-      |-- lastUpdated: timestamp      # Fecha de última actualización (opcional)
+  |-- {shiftId}/  # ID generado automáticamente
+      |-- date: string           # Fecha del turno (formato YYYY-MM-DD)
+      |-- period: string         # Periodo del turno ('morning' o 'afternoon')
+      |-- capacity: number       # Capacidad máxima de voluntarios
+      |-- assignments: array     # Array de asignaciones
+          |-- uid: string        # ID del usuario asignado
+          |-- name: string       # Nombre del usuario
+          |-- timestamp: number  # Fecha y hora de asignación (timestamp)
+      |-- notes: string          # Notas adicionales sobre el turno (opcional)
 ```
 
-### Ejemplos
+### Índices requeridos
 
-```json
-{
-  "date": "2023-06-05",
-  "shift": "M",
-  "assignments": [
-    {
-      "uid": "user123"
-    },
-    {
-      "uid": "user456"
-    }
-  ],
-  "notes": "Llevar provisiones extra para los nuevos cachorros",
-  "lastUpdated": "2023-06-01T10:15:00Z"
-}
-```
-
-```json
-{
-  "date": "2023-06-05",
-  "shift": "T",
-  "assignments": [
-    {
-      "uid": "user789"
-    }
-  ],
-  "notes": "",
-  "lastUpdated": "2023-06-03T09:00:00Z"
-}
-```
+- `date`: Para consultas que filtran por fecha
+- `assignments.uid`: Para consultas que buscan asignaciones de un usuario específico
+- Compuesto `date,period`: Para consultas que filtran por fecha y periodo
 
 ## Colección: `settings`
 
@@ -114,32 +66,31 @@ shifts/
 
 ```
 settings/
-  |-- system/
-      |-- minVolunteersPerShift: number  # Número mínimo de voluntarios por turno
-      |-- requireResponsable: boolean    # Indicador si se requiere responsable en cada turno
-      |-- advanceScheduleDays: number    # Días de antelación para programar turnos
-```
-
-### Ejemplo
-
-```json
-{
-  "minVolunteersPerShift": 2,
-  "requireResponsable": true,
-  "advanceScheduleDays": 14
-}
+  |-- application/
+      |-- maxVolunteersPerShift: number    # Número máximo de voluntarios por turno por defecto
+      |-- advanceBookingDays: number       # Días de antelación permitidos para reserva
+      |-- cancelBeforeHours: number        # Horas antes del turno permitidas para cancelación
+      |-- shiftMorningStart: string        # Hora de inicio del turno de mañana (formato HH:MM)
+      |-- shiftMorningEnd: string          # Hora de fin del turno de mañana (formato HH:MM)
+      |-- shiftAfternoonStart: string      # Hora de inicio del turno de tarde (formato HH:MM)
+      |-- shiftAfternoonEnd: string        # Hora de fin del turno de tarde (formato HH:MM)
 ```
 
 ## Consultas comunes
 
 ### Obtener todos los usuarios activos
 ```javascript
-db.collection('users').where('isActive', '==', true).get()
+db.collection('users').where('isEnabled', '==', true).get()
 ```
 
 ### Obtener administradores
 ```javascript
 db.collection('users').where('roles', 'array-contains', 3).get()
+```
+
+### Obtener usuarios responsables
+```javascript
+db.collection('users').where('roles', 'array-contains', 2).get()
 ```
 
 ### Obtener turnos para una semana específica
@@ -159,9 +110,22 @@ db.collection('shifts')
   .get()
 ```
 
-## Consideraciones de escalabilidad
+### Obtener configuración de la aplicación
+```javascript
+db.collection('settings').doc('application').get()
+```
 
-1. **Consultas eficientes**: Mantener las consultas filtradas para evitar descargar grandes conjuntos de datos.
-2. **Límites de documento**: Firestore tiene un límite de 1MB por documento, lo que debería ser suficiente para el uso esperado.
-3. **Índices compuestos**: Crear índices compuestos para consultas frecuentes (ver documento FIREBASE_CONFIG.md).
-4. **Crecimiento de datos**: Considerar estrategias de archivado para datos históricos si la aplicación escala significativamente.
+## Relaciones entre colecciones
+
+- La relación entre `users` y `shifts` se establece mediante el campo `assignments.uid` en los documentos de `shifts`, que hace referencia al ID del documento en `users`.
+- Esta relación es de tipo muchos a muchos, ya que un usuario puede estar asignado a varios turnos, y un turno puede tener varios usuarios asignados.
+
+## Consideraciones de diseño
+
+1. **Desnormalización controlada**: Se han desnormalizado algunos datos (como el nombre del usuario en `assignments`) para reducir el número de lecturas necesarias para operaciones comunes.
+
+2. **Restricciones de seguridad**: Las reglas de seguridad de Firestore controlan el acceso a los documentos según el rol del usuario.
+
+3. **Evolución del esquema**: A medida que la aplicación evoluciona, se han añadido nuevos campos como `isEnabled` para mejorar la gestión de usuarios.
+
+4. **Campos duplicados**: Algunos campos como `role` (singular) existen por compatibilidad con versiones anteriores, pero se recomienda usar `roles` (plural) para todas las nuevas funcionalidades.

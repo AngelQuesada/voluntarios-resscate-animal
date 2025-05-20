@@ -14,6 +14,8 @@ La autenticación se implementa utilizando Firebase Authentication. Para acceder
 Authorization: Bearer {token}
 ```
 
+El token se puede obtener después de iniciar sesión a través de Firebase Authentication.
+
 ## Endpoints disponibles
 
 ### Usuarios
@@ -34,10 +36,14 @@ Devuelve la información del usuario autenticado actualmente.
   "email": "string",
   "photoURL": "string|null",
   "roles": "number[]",
-  "isActive": "boolean",
+  "isEnabled": "boolean", 
+  "name": "string",
+  "lastname": "string",
+  "username": "string",
+  "phone": "string",
   "location": "string|null",
   "occupation": "string|null",
-  "dateOfBirth": "string|null"
+  "birthdate": "string|null"
 }
 ```
 
@@ -47,10 +53,7 @@ Devuelve la información del usuario autenticado actualmente.
 GET /api/users/{uid}
 ```
 
-Devuelve información de un usuario específico por ID. Requiere rol de administrador.
-
-**Parámetros:**
-- `uid`: ID único del usuario
+Devuelve la información de un usuario específico. Requiere rol de administrador o ser el propio usuario.
 
 **Respuesta exitosa (200):**
 ```json
@@ -58,42 +61,16 @@ Devuelve información de un usuario específico por ID. Requiere rol de administ
   "uid": "string",
   "displayName": "string",
   "email": "string",
-  "photoURL": "string|null",
   "roles": "number[]",
-  "isActive": "boolean",
+  "isEnabled": "boolean",
+  "name": "string",
+  "lastname": "string",
+  "username": "string",
+  "phone": "string",
   "location": "string|null",
   "occupation": "string|null",
-  "dateOfBirth": "string|null"
+  "birthdate": "string|null"
 }
-```
-
-#### Listar usuarios
-
-```
-GET /api/users
-```
-
-Devuelve una lista de todos los usuarios. Requiere rol de administrador.
-
-**Parámetros de consulta opcionales:**
-- `active`: Filtrar por estado activo (true/false)
-- `role`: Filtrar por rol (1, 2, 3)
-
-**Respuesta exitosa (200):**
-```json
-[
-  {
-    "uid": "string",
-    "displayName": "string",
-    "email": "string",
-    "photoURL": "string|null",
-    "roles": "number[]",
-    "isActive": "boolean",
-    "location": "string|null",
-    "occupation": "string|null",
-    "dateOfBirth": "string|null"
-  }
-]
 ```
 
 #### Crear usuario
@@ -107,13 +84,17 @@ Crea un nuevo usuario. Requiere rol de administrador.
 **Cuerpo de la solicitud:**
 ```json
 {
-  "displayName": "string",
   "email": "string",
   "password": "string",
+  "name": "string",
+  "lastname": "string",
+  "username": "string",
   "roles": "number[]",
+  "phone": "string",
   "location": "string",
-  "occupation": "string",
-  "dateOfBirth": "string"
+  "job": "string",
+  "birthdate": "string",
+  "isEnabled": "boolean"
 }
 ```
 
@@ -121,10 +102,9 @@ Crea un nuevo usuario. Requiere rol de administrador.
 ```json
 {
   "uid": "string",
-  "displayName": "string",
   "email": "string",
   "roles": "number[]",
-  "isActive": true
+  "isEnabled": "boolean"
 }
 ```
 
@@ -134,21 +114,20 @@ Crea un nuevo usuario. Requiere rol de administrador.
 PUT /api/users/{uid}
 ```
 
-Actualiza la información de un usuario. Requiere rol de administrador.
-
-**Parámetros:**
-- `uid`: ID único del usuario
+Actualiza la información de un usuario existente. Requiere rol de administrador o ser el propio usuario. Los administradores pueden actualizar todos los campos, mientras que los usuarios normales solo pueden actualizar ciertos campos personales.
 
 **Cuerpo de la solicitud:**
 ```json
 {
-  "displayName": "string",
-  "email": "string",
-  "roles": "number[]",
-  "isActive": "boolean",
+  "name": "string",
+  "lastname": "string",
+  "username": "string",
+  "phone": "string",
   "location": "string",
-  "occupation": "string",
-  "dateOfBirth": "string"
+  "job": "string", 
+  "birthdate": "string",
+  "roles": "number[]", 
+  "isEnabled": "boolean"
 }
 ```
 
@@ -156,13 +135,9 @@ Actualiza la información de un usuario. Requiere rol de administrador.
 ```json
 {
   "uid": "string",
-  "displayName": "string",
-  "email": "string",
   "roles": "number[]",
-  "isActive": "boolean",
-  "location": "string",
-  "occupation": "string",
-  "dateOfBirth": "string"
+  "isEnabled": "boolean",
+  "message": "Usuario actualizado correctamente"
 }
 ```
 
@@ -174,26 +149,54 @@ DELETE /api/users/{uid}
 
 Elimina un usuario. Requiere rol de administrador.
 
-**Parámetros:**
-- `uid`: ID único del usuario
+**Respuesta exitosa (200):**
+```json
+{
+  "message": "Usuario eliminado correctamente"
+}
+```
 
-**Respuesta exitosa (204):**
-Sin contenido
+#### Obtener todos los usuarios
+
+```
+GET /api/users
+```
+
+Obtiene la lista de todos los usuarios. Requiere rol de administrador.
+
+**Parámetros de consulta opcionales:**
+- `role`: Filtrar por rol específico (número)
+- `enabled`: Filtrar por estado de habilitación (true/false)
+
+**Respuesta exitosa (200):**
+```json
+[
+  {
+    "uid": "string",
+    "displayName": "string",
+    "email": "string",
+    "roles": "number[]",
+    "isEnabled": "boolean",
+    "name": "string",
+    "lastname": "string",
+    "username": "string"
+  }
+]
+```
 
 ### Turnos
 
-#### Obtener turnos
+#### Obtener turnos por fecha
 
 ```
 GET /api/shifts
 ```
 
-Devuelve los turnos disponibles.
+Obtiene los turnos para un rango de fechas específico.
 
-**Parámetros de consulta opcionales:**
-- `startDate`: Fecha de inicio (YYYY-MM-DD)
-- `endDate`: Fecha de fin (YYYY-MM-DD)
-- `myShifts`: Si es "true", devuelve solo los turnos del usuario actual
+**Parámetros de consulta:**
+- `startDate`: Fecha de inicio (formato YYYY-MM-DD)
+- `endDate`: Fecha de fin (formato YYYY-MM-DD)
 
 **Respuesta exitosa (200):**
 ```json
@@ -201,142 +204,82 @@ Devuelve los turnos disponibles.
   {
     "id": "string",
     "date": "string",
-    "shift": "string",
+    "period": "morning|afternoon",
+    "capacity": "number",
     "assignments": [
       {
         "uid": "string",
-        "displayName": "string",
-        "roles": "number[]",
-        "assignedAt": "string"
+        "name": "string",
+        "timestamp": "number"
       }
     ],
-    "notes": "string"
+    "notes": "string|null"
   }
 ]
 ```
 
-#### Obtener turno por ID
+#### Obtener turno específico
 
 ```
-GET /api/shifts/{id}
+GET /api/shifts/{shiftId}
 ```
 
-Devuelve información de un turno específico.
-
-**Parámetros:**
-- `id`: ID del turno (formato: YYYY-MM-DD_M o YYYY-MM-DD_T)
+Obtiene información detallada de un turno específico.
 
 **Respuesta exitosa (200):**
 ```json
 {
   "id": "string",
   "date": "string",
-  "shift": "string",
+  "period": "morning|afternoon",
+  "capacity": "number",
   "assignments": [
     {
       "uid": "string",
-      "displayName": "string",
-      "roles": "number[]",
-      "assignedAt": "string"
+      "name": "string",
+      "timestamp": "number"
     }
   ],
-  "notes": "string"
+  "notes": "string|null"
 }
 ```
 
 #### Crear o actualizar turno
 
 ```
-PUT /api/shifts/{id}
+POST /api/shifts
 ```
 
-Crea o actualiza un turno. Requiere rol de responsable o administrador.
-
-**Parámetros:**
-- `id`: ID del turno (formato: YYYY-MM-DD_M o YYYY-MM-DD_T)
+Crea un nuevo turno o actualiza uno existente. Requiere rol de responsable o administrador.
 
 **Cuerpo de la solicitud:**
 ```json
 {
   "date": "string",
-  "shift": "string",
-  "assignments": [
-    {
-      "uid": "string",
-      "displayName": "string",
-      "roles": "number[]"
-    }
-  ],
-  "notes": "string"
+  "period": "morning|afternoon",
+  "capacity": "number",
+  "notes": "string|null"
 }
 ```
 
-**Respuesta exitosa (200):**
+**Respuesta exitosa (201/200):**
 ```json
 {
   "id": "string",
   "date": "string",
-  "shift": "string",
-  "assignments": [
-    {
-      "uid": "string",
-      "displayName": "string",
-      "roles": "number[]",
-      "assignedAt": "string"
-    }
-  ],
-  "notes": "string"
+  "period": "morning|afternoon",
+  "capacity": "number",
+  "message": "Turno creado/actualizado correctamente"
 }
 ```
 
-#### Asignar usuario a turno
+#### Asignar voluntario a turno
 
 ```
-POST /api/shifts/{id}/assign
+POST /api/shifts/{shiftId}/assign
 ```
 
 Asigna un usuario a un turno específico.
-
-**Parámetros:**
-- `id`: ID del turno (formato: YYYY-MM-DD_M o YYYY-MM-DD_T)
-
-**Cuerpo de la solicitud:**
-```json
-{
-  "uid": "string",
-  "displayName": "string",
-  "roles": "number[]"
-}
-```
-
-**Respuesta exitosa (200):**
-```json
-{
-  "id": "string",
-  "date": "string",
-  "shift": "string",
-  "assignments": [
-    {
-      "uid": "string",
-      "displayName": "string",
-      "roles": "number[]",
-      "assignedAt": "string"
-    }
-  ],
-  "notes": "string"
-}
-```
-
-#### Desasignar usuario de turno
-
-```
-POST /api/shifts/{id}/unassign
-```
-
-Elimina la asignación de un usuario de un turno.
-
-**Parámetros:**
-- `id`: ID del turno (formato: YYYY-MM-DD_M o YYYY-MM-DD_T)
 
 **Cuerpo de la solicitud:**
 ```json
@@ -348,109 +291,130 @@ Elimina la asignación de un usuario de un turno.
 **Respuesta exitosa (200):**
 ```json
 {
-  "id": "string",
-  "date": "string",
-  "shift": "string",
-  "assignments": [
-    {
-      "uid": "string",
-      "displayName": "string",
-      "roles": "number[]",
-      "assignedAt": "string"
-    }
-  ],
-  "notes": "string"
+  "success": true,
+  "message": "Asignación realizada correctamente"
 }
+```
+
+#### Desasignar voluntario de turno
+
+```
+POST /api/shifts/{shiftId}/unassign
+```
+
+Elimina la asignación de un usuario a un turno.
+
+**Cuerpo de la solicitud:**
+```json
+{
+  "uid": "string"
+}
+```
+
+**Respuesta exitosa (200):**
+```json
+{
+  "success": true,
+  "message": "Asignación eliminada correctamente"
+}
+```
+
+### Historial
+
+#### Obtener historial de turnos
+
+```
+GET /api/history
+```
+
+Obtiene el historial de turnos pasados. Requiere rol de administrador.
+
+**Parámetros de consulta:**
+- `startDate`: Fecha de inicio (formato YYYY-MM-DD)
+- `endDate`: Fecha de fin (formato YYYY-MM-DD)
+
+**Respuesta exitosa (200):**
+```json
+[
+  {
+    "id": "string",
+    "date": "string",
+    "period": "morning|afternoon",
+    "capacity": "number",
+    "assignments": [
+      {
+        "uid": "string",
+        "name": "string",
+        "timestamp": "number"
+      }
+    ]
+  }
+]
 ```
 
 ### Configuración
 
-#### Obtener configuración del sistema
+#### Obtener configuración de la aplicación
 
 ```
 GET /api/settings
 ```
 
-Devuelve la configuración global del sistema. Accesible para todos los usuarios autenticados.
+Obtiene la configuración general de la aplicación.
 
 **Respuesta exitosa (200):**
 ```json
 {
-  "minVolunteersPerShift": "number",
-  "requireResponsable": "boolean",
-  "advanceScheduleDays": "number"
+  "maxVolunteersPerShift": "number",
+  "advanceBookingDays": "number",
+  "cancelBeforeHours": "number",
+  "shiftMorningStart": "string",
+  "shiftMorningEnd": "string",
+  "shiftAfternoonStart": "string",
+  "shiftAfternoonEnd": "string"
 }
 ```
 
-#### Actualizar configuración del sistema
+#### Actualizar configuración de la aplicación
 
 ```
-PUT /api/settings
+POST /api/settings
 ```
 
-Actualiza la configuración global del sistema. Requiere rol de administrador.
+Actualiza la configuración de la aplicación. Requiere rol de administrador.
 
 **Cuerpo de la solicitud:**
 ```json
 {
-  "minVolunteersPerShift": "number",
-  "requireResponsable": "boolean",
-  "advanceScheduleDays": "number"
+  "maxVolunteersPerShift": "number",
+  "advanceBookingDays": "number",
+  "cancelBeforeHours": "number",
+  "shiftMorningStart": "string",
+  "shiftMorningEnd": "string",
+  "shiftAfternoonStart": "string",
+  "shiftAfternoonEnd": "string"
 }
 ```
 
 **Respuesta exitosa (200):**
 ```json
 {
-  "minVolunteersPerShift": "number",
-  "requireResponsable": "boolean",
-  "advanceScheduleDays": "number"
+  "success": true,
+  "message": "Configuración actualizada correctamente"
 }
 ```
 
 ## Códigos de error comunes
 
-- **400 Bad Request**: Solicitud malformada o datos inválidos
+- **400 Bad Request**: La solicitud contiene datos incorrectos o mal formados
 - **401 Unauthorized**: No autenticado o token inválido
-- **403 Forbidden**: No tiene permiso para acceder al recurso
-- **404 Not Found**: Recurso no encontrado
-- **409 Conflict**: Conflicto en la operación (ej. email ya en uso)
+- **403 Forbidden**: Autenticado pero sin permisos suficientes
+- **404 Not Found**: El recurso solicitado no existe
+- **409 Conflict**: Conflicto al procesar la solicitud (ej: email ya en uso)
 - **500 Internal Server Error**: Error interno del servidor
 
-## Ejemplos de uso
+## Limitaciones y consideraciones
 
-### Ejemplo: Asignar un usuario a un turno
-
-```javascript
-// Asignar usuario al turno de mañana del 1 de junio de 2023
-fetch('/api/shifts/2023-06-01_M/assign', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    uid: 'user123',
-    displayName: 'Juan Pérez',
-    roles: [3]
-  })
-})
-.then(response => response.json())
-.then(data => console.log(data))
-.catch(error => console.error('Error:', error));
-```
-
-### Ejemplo: Listar todos los usuarios activos
-
-```javascript
-// Obtener todos los usuarios activos
-fetch('/api/users?active=true', {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
-})
-.then(response => response.json())
-.then(data => console.log(data))
-.catch(error => console.error('Error:', error));
-```
+1. Los tokens de autenticación tienen una duración limitada. Es recomendable refrescarlos periódicamente.
+2. Las operaciones de administración (creación/eliminación de usuarios, etc.) solo están disponibles para usuarios con rol de administrador.
+3. Las operaciones relacionadas con turnos pueden requerir diferentes niveles de permisos según la acción.

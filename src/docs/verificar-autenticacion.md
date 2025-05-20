@@ -35,6 +35,7 @@ El sistema de autenticación está configurado para redirigir automáticamente:
 
 1. Si no estás autenticado, serás redirigido a la página de inicio (`/`).
 2. Si estás autenticado y te encuentras en la página de inicio, serás redirigido a la página de horarios (`/schedule`).
+3. Si intentas acceder a páginas administrativas sin tener el rol necesario, serás redirigido a `/schedule`.
 
 ## Información disponible del usuario autenticado
 
@@ -42,7 +43,69 @@ Cuando un usuario está autenticado, el objeto `user` contiene información como
 
 - `user.email`: Correo electrónico del usuario
 - `user.uid`: Identificador único del usuario
-- `user.displayName`: Nombre mostrado (si está configurado)
+- `user.name`: Nombre del usuario
+- `user.lastname`: Apellido del usuario
+- `user.roles`: Array de roles asignados al usuario (valores numéricos)
+
+## Sistema de roles de usuario
+
+La aplicación implementa un sistema de roles para controlar el acceso a diferentes funcionalidades:
+
+| ID | Nombre | Descripción |
+|----|--------|-------------|
+| 1 | Voluntario | Participación en turnos programados |
+| 2 | Responsable | Coordinación de turnos y voluntarios |
+| 3 | Administrador | Control total del sistema |
+
+### Verificación de roles
+
+Para verificar si un usuario tiene un rol específico:
+
+```tsx
+import { UserRoles } from "@/lib/constants";
+import { useAuth } from "@/context/AuthContext";
+
+function ComponenteProtegido() {
+  const { user } = useAuth();
+  
+  const isAdmin = user && Array.isArray(user.roles) && user.roles.includes(UserRoles.ADMINISTRADOR);
+  
+  if (!isAdmin) {
+    return <p>No tienes permisos de administrador</p>;
+  }
+  
+  return <p>Contenido solo para administradores</p>;
+}
+```
+
+## Control de acceso basado en roles
+
+Para proteger componentes o páginas completas según el rol del usuario, puedes utilizar el componente `RoleProtected`:
+
+```tsx
+import RoleProtected from "@/components/auth/RoleProtected";
+import { UserRoles } from "@/lib/constants";
+
+export default function AdminPage() {
+  return (
+    <RoleProtected requiredRoles={[UserRoles.ADMINISTRADOR]} fallbackUrl="/schedule">
+      <main>
+        {/* Contenido solo para administradores */}
+      </main>
+    </RoleProtected>
+  );
+}
+```
+
+## Estado de habilitación de usuarios
+
+Los usuarios pueden ser habilitados o deshabilitados por los administradores. Un usuario deshabilitado no podrá iniciar sesión en el sistema.
+
+Para verificar si un usuario está habilitado:
+
+```tsx
+const isEnabled = user && user.isEnabled !== false;
+```
 
 ## Verificación visual
 

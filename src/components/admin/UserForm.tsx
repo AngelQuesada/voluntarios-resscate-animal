@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip, Switch, FormControlLabel } from "@mui/material";
 import { UserRoles } from "@/lib/constants";
 
@@ -22,6 +22,7 @@ interface UserFormProps {
   setUserData: (value: React.SetStateAction<any>) => void;
   isAddMode?: boolean;
   handleEnabledSwitchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  submitAttempted?: boolean;
 }
 
 const UserForm: React.FC<UserFormProps> = ({ 
@@ -29,19 +30,20 @@ const UserForm: React.FC<UserFormProps> = ({
   handleChange, 
   setUserData, 
   isAddMode = false,
-  handleEnabledSwitchChange 
+  handleEnabledSwitchChange,
+  submitAttempted = false
 }) => {
-  // Estado local para la validación del teléfono
-  const [phoneError, setPhoneError] = useState<boolean>(false);
+  // Validación del teléfono
+  const phoneError = userData.phone && !isValidPhone(userData.phone) && submitAttempted;
+  
+  // Validación de contraseñas
+  const passwordsDoNotMatch = isAddMode && 
+    submitAttempted && 
+    userData.password !== (userData.passwordConfirm || "");
 
-  // Efecto para validar el teléfono cuando cambia
-  useEffect(() => {
-    if (userData.phone) {
-      setPhoneError(!isValidPhone(userData.phone));
-    } else {
-      setPhoneError(false);
-    }
-  }, [userData.phone]);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleChange(e);
+  };
 
   return (
     <>
@@ -54,8 +56,10 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.username}
-        onChange={handleChange}
+        onChange={handleInputChange}
         required
+        error={submitAttempted && !userData.username}
+        helperText={submitAttempted && !userData.username ? "El nombre de usuario es obligatorio" : ""}
       />
       
       {/* Switch para habilitar/deshabilitar usuario */}
@@ -80,8 +84,10 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.name}
-        onChange={handleChange}
+        onChange={handleInputChange}
         required
+        error={submitAttempted && !userData.name}
+        helperText={submitAttempted && !userData.name ? "El nombre es obligatorio" : ""}
       />
       <TextField
         margin="dense"
@@ -91,8 +97,10 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.lastname}
-        onChange={handleChange}
+        onChange={handleInputChange}
         required
+        error={submitAttempted && !userData.lastname}
+        helperText={submitAttempted && !userData.lastname ? "Los apellidos son obligatorios" : ""}
       />
       <TextField
         margin="dense"
@@ -102,7 +110,7 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.birthdate}
-        onChange={handleChange}
+        onChange={handleInputChange}
         InputLabelProps={{
           shrink: true,
         }}
@@ -115,8 +123,10 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.email}
-        onChange={handleChange}
+        onChange={handleInputChange}
         required
+        error={submitAttempted && !userData.email}
+        helperText={submitAttempted && !userData.email ? "El correo electrónico es obligatorio" : ""}
       />
       {isAddMode && (
         <>
@@ -128,9 +138,16 @@ const UserForm: React.FC<UserFormProps> = ({
             fullWidth
             variant="outlined"
             value={userData.password}
-            onChange={handleChange}
+            onChange={handleInputChange}
             required
-            helperText="Mínimo 6 caracteres."
+            error={submitAttempted && (!userData.password || userData.password.length < 6)}
+            helperText={
+              submitAttempted && !userData.password 
+                ? "La contraseña es obligatoria" 
+                : submitAttempted && userData.password && userData.password.length < 6
+                  ? "La contraseña debe tener al menos 6 caracteres"
+                  : "Mínimo 6 caracteres."
+            }
           />
           <TextField
             margin="dense"
@@ -140,11 +157,11 @@ const UserForm: React.FC<UserFormProps> = ({
             fullWidth
             variant="outlined"
             value={userData.passwordConfirm || ""}
-            onChange={handleChange}
+            onChange={handleInputChange}
             required
-            error={userData.password !== (userData.passwordConfirm || "")}
+            error={passwordsDoNotMatch}
             helperText={
-              userData.password !== (userData.passwordConfirm || "") 
+              passwordsDoNotMatch
                 ? "Las contraseñas no coinciden" 
                 : "Repite la contraseña para confirmar."
             }
@@ -159,10 +176,16 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.phone}
-        onChange={handleChange}
+        onChange={handleInputChange}
         required
-        error={phoneError}
-        helperText={phoneError ? "Formato de teléfono inválido. Usa formato: 6XXXXXXXX, +34 6XXXXXXXX, etc." : ""}
+        error={submitAttempted && (!userData.phone || phoneError)}
+        helperText={
+          submitAttempted && !userData.phone
+            ? "El teléfono es obligatorio"
+            : phoneError
+              ? "Formato de teléfono inválido. Usa formato: 6XXXXXXXX, +34 6XXXXXXXX, etc."
+              : ""
+        }
         InputProps={{
           inputProps: {
             pattern: "^(\\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$"
@@ -246,7 +269,7 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.job}
-        onChange={handleChange}
+        onChange={handleInputChange}
       />
       <TextField
         margin="dense"
@@ -256,7 +279,7 @@ const UserForm: React.FC<UserFormProps> = ({
         fullWidth
         variant="outlined"
         value={userData.location}
-        onChange={handleChange}
+        onChange={handleInputChange}
       />
     </>
   );

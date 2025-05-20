@@ -22,19 +22,11 @@ const SignInForm = ({
   isLoading,
   handleSignIn,
 }: SignInFormProps) => {
-  const [touched, setTouched] = useState({
-    email: false,
-    password: false,
-  });
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formErrors, setFormErrors] = useState({
     email: "",
     password: "",
   });
-
-  const handleBlur = (field: "email" | "password") => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-    validateField(field);
-  };
 
   const validateField = (field: "email" | "password") => {
     if (field === "email" && !email.trim()) {
@@ -69,18 +61,12 @@ const SignInForm = ({
   const validateForm = () => {
     const emailValid = validateField("email");
     const passwordValid = validateField("password");
-
-    // Marcar todos los campos como touched para mostrar errores
-    setTouched({
-      email: true,
-      password: true,
-    });
-
     return emailValid && passwordValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
 
     if (!validateForm()) {
       return;
@@ -106,12 +92,14 @@ const SignInForm = ({
         autoComplete="email"
         autoFocus
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        onBlur={() => handleBlur("email")}
-        error={!!error || (touched.email && !!formErrors.email)}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          if (submitAttempted) validateField("email");
+        }}
+        error={!!error || (submitAttempted && !!formErrors.email)}
         disabled={isLoading}
         helperText={
-          touched.email && formErrors.email ? formErrors.email : ""
+          submitAttempted && formErrors.email ? formErrors.email : ""
         }
         sx={textFieldStyles}
       />
@@ -125,12 +113,14 @@ const SignInForm = ({
         id="password"
         autoComplete="current-password"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        onBlur={() => handleBlur("password")}
-        error={!!error || (touched.password && !!formErrors.password)}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          if (submitAttempted) validateField("password");
+        }}
+        error={!!error || (submitAttempted && !!formErrors.password)}
         disabled={isLoading}
         helperText={
-          touched.password && formErrors.password ? formErrors.password : ""
+          submitAttempted && formErrors.password ? formErrors.password : ""
         }
         sx={textFieldStyles}
       />

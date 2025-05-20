@@ -47,6 +47,10 @@ export const useAdminPanel = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
+  // Estados para controlar cuando se ha intentado enviar el formulario
+  const [addSubmitAttempted, setAddSubmitAttempted] = useState(false);
+  const [editSubmitAttempted, setEditSubmitAttempted] = useState(false);
+
   const [newUserInfo, setNewUserInfo] = useState<NewUserInfoState>({
     username: '',
     roles: [], 
@@ -113,6 +117,16 @@ export const useAdminPanel = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Reset validación cuando se cierra el diálogo
+  useEffect(() => {
+    if (!isAddDialogOpen) {
+      setAddSubmitAttempted(false);
+    }
+    if (!isEditDialogOpen) {
+      setEditSubmitAttempted(false);
+    }
+  }, [isAddDialogOpen, isEditDialogOpen]);
+
   const handlePrioritizeResponsablesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setPrioritizeResponsables(event.target.checked);
   };
@@ -149,6 +163,8 @@ export const useAdminPanel = () => {
 
   const handleAddUser = async () => {
     setFormError(null);
+    setAddSubmitAttempted(true);
+    
     if (
       !newUserInfo.username ||
       !newUserInfo.name ||
@@ -243,6 +259,7 @@ export const useAdminPanel = () => {
       });
 
       setIsAddDialogOpen(false);
+      setAddSubmitAttempted(false);
 
       fetchUsers();
       setSnackbarMessage('Usuario creado correctamente');
@@ -274,7 +291,6 @@ export const useAdminPanel = () => {
 
   const openEditDialog = (user: User) => {
     setUserToEdit(user);
-    // Asegurarse de que 'roles' sea siempre un array
     const currentRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : []);
 
     setEditUserInfo({
@@ -291,10 +307,13 @@ export const useAdminPanel = () => {
     });
     setIsEditDialogOpen(true);
     setFormError(null);
+    setEditSubmitAttempted(false);
   };
 
   const handleEditUser = async () => {
     setFormError(null);
+    setEditSubmitAttempted(true);
+    
     if (!userToEdit) return;
 
     if (
@@ -335,6 +354,8 @@ export const useAdminPanel = () => {
 
       setIsEditDialogOpen(false);
       setUserToEdit(null);
+      setEditSubmitAttempted(false);
+      
       fetchUsers();
       setSnackbarMessage('Usuario actualizado correctamente');
       setSnackbarOpen(true);
@@ -532,5 +553,7 @@ export const useAdminPanel = () => {
     handleEditEnabledSwitchChange,
     isAddingUser,
     isDeletingUser,
+    addSubmitAttempted,
+    editSubmitAttempted
   };
 };

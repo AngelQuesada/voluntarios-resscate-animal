@@ -127,6 +127,8 @@ export function AdminPanel() {
     handlePrioritizeResponsablesChange,
     handleEnabledSwitchChange,
     handleEditEnabledSwitchChange,
+    addSubmitAttempted,
+    editSubmitAttempted,
   } = useAdminPanel();
 
 
@@ -431,6 +433,7 @@ export function AdminPanel() {
               setUserData={setNewUserInfo}
               isAddMode={true}
               handleEnabledSwitchChange={handleEnabledSwitchChange}
+              submitAttempted={addSubmitAttempted}
             />
           }
           error={formError}
@@ -446,34 +449,35 @@ export function AdminPanel() {
         />
 
         <DialogComponent
-                  open={isEditDialogOpen}
-                  onClose={() => setIsEditDialogOpen(false)}
-                  title="Editar Usuario"
-                  content={
-                    <UserForm
-                      userData={editUserInfo}
-                      handleChange={handleEditInputChange}
-                      setUserData={setEditUserInfo}
-                      isAddMode={false}
-                      handleEnabledSwitchChange={handleEditEnabledSwitchChange}
-                    />
-                  }
-                  error={formError}
-                  actions={[
-                    { 
-                      label: "Cancelar", 
-                      onClick: () => setIsEditDialogOpen(false),
-                      disabled: isAddingUser
-                    },
-                    {
-                      label: "Guardar Cambios",
-                      onClick: handleEditUser,
-                      variant: "contained",
-                      color: "primary",
-                      disabled: isAddingUser
-                    }
-                  ]}
-                />
+          open={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          title="Editar Usuario"
+          content={
+            <UserForm
+              userData={editUserInfo}
+              handleChange={handleEditInputChange}
+              setUserData={setEditUserInfo}
+              isAddMode={false}
+              handleEnabledSwitchChange={handleEditEnabledSwitchChange}
+              submitAttempted={editSubmitAttempted}
+            />
+          }
+          error={formError}
+          actions={[
+            { 
+              label: "Cancelar", 
+              onClick: () => setIsEditDialogOpen(false),
+              disabled: isAddingUser
+            },
+            {
+              label: "Guardar Cambios",
+              onClick: handleEditUser,
+              variant: "contained",
+              color: "primary",
+              disabled: isAddingUser
+            }
+          ]}
+        />
 
         <DialogComponent
           open={isDeleteDialogOpen}

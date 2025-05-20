@@ -35,13 +35,11 @@ export function middleware(request: NextRequest) {
     );
     
     if (isProtectedRoute) {
-      console.log('Usuario no autenticado intentando acceder a ruta protegida, redirigiendo a login');
       return NextResponse.redirect(new URL('/', request.url));
     }
   }
 
   else if (isAuthenticated && pathname === '/') {
-    console.log('Usuario autenticado detectado en página de login, redirigiendo a /schedule');
     return NextResponse.redirect(new URL('/schedule', request.url));
   }
 

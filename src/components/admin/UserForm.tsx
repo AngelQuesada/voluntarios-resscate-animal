@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useEffect } from "react";
 import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip, Switch, FormControlLabel } from "@mui/material";
 import { UserRoles } from "@/lib/constants";
 
@@ -40,10 +40,75 @@ const UserForm: React.FC<UserFormProps> = ({
   const passwordsDoNotMatch = isAddMode && 
     submitAttempted && 
     userData.password !== (userData.passwordConfirm || "");
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleChange(e);
+    
+  // Referencias para los campos de texto para mantener el estado del formulario en un componente no controlado
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const lastnameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const jobRef = useRef<HTMLInputElement>(null);
+  const locationRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const passwordConfirmRef = useRef<HTMLInputElement>(null);
+  const birthdateRef = useRef<HTMLInputElement>(null);
+  
+  // Manejar los cambios en el formulario al perder el foco (onBlur) en lugar de en cada tecla
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    handleChange(e as any);
   };
+
+  // Configurar el orden de los elementos del formulario
+  const inputFieldsOrder = isAddMode ? 
+    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, passwordRef, passwordConfirmRef, phoneRef, jobRef, locationRef] :
+    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, phoneRef, jobRef, locationRef];
+
+  // Esta función conecta los campos para la navegación
+  useEffect(() => {
+    // Agregar oyentes para manejar la navegación del teclado
+    const fields = inputFieldsOrder.filter(ref => ref.current);
+
+    fields.forEach((fieldRef, index) => {
+      if (!fieldRef.current) return;
+      
+      // Eliminar primero los event listeners anteriores para evitar duplicados
+      const element = fieldRef.current;
+      
+      element.addEventListener('keydown', (e: KeyboardEvent) => {
+        // Solo manejar la tecla Enter, Tab o ir a siguiente desde el teclado móvil
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const nextField = fields[index + 1];
+          if (nextField && nextField.current) {
+            nextField.current.focus();
+          }
+        }
+      });
+    });
+
+    fields.forEach((fieldRef, index) => {
+      if (!fieldRef.current) return;
+      
+      if (index < fields.length - 1) {
+        fieldRef.current.setAttribute('enterkeyhint', 'next');
+      } else {
+        fieldRef.current.setAttribute('enterkeyhint', 'done');
+      }
+    });
+
+    // Limpiar event listeners al desmontar
+    return () => {
+      fields.forEach(fieldRef => {
+        if (fieldRef.current) {
+          const clone = fieldRef.current.cloneNode(true);
+          if (fieldRef.current.parentNode) {
+            fieldRef.current.parentNode.replaceChild(clone, fieldRef.current);
+          }
+        }
+      });
+    };
+  }, [isAddMode]);
 
   return (
     <>
@@ -55,13 +120,19 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        value={userData.username}
-        onChange={handleInputChange}
+        defaultValue={userData.username}
+        inputRef={usernameRef}
+        onBlur={handleBlur}
         required
         error={submitAttempted && !userData.username}
         helperText={submitAttempted && !userData.username ? "El nombre de usuario es obligatorio" : ""}
         inputProps={{
-          autoCapitalize: "none"
+          autoCapitalize: "none",
+          autoComplete: "off",
+          autoCorrect: "off"
+        }}
+        InputProps={{
+          inputMode: "text",
         }}
       />
       
@@ -86,11 +157,19 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        value={userData.name}
-        onChange={handleInputChange}
+        defaultValue={userData.name}
+        inputRef={nameRef}
+        onBlur={handleBlur}
         required
         error={submitAttempted && !userData.name}
         helperText={submitAttempted && !userData.name ? "El nombre es obligatorio" : ""}
+        inputProps={{
+          autoComplete: "off",
+          autoCorrect: "off"
+        }}
+        InputProps={{
+          inputMode: "text",
+        }}
       />
       <TextField
         margin="dense"
@@ -99,11 +178,19 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        value={userData.lastname}
-        onChange={handleInputChange}
+        defaultValue={userData.lastname}
+        inputRef={lastnameRef}
+        onBlur={handleBlur}
         required
         error={submitAttempted && !userData.lastname}
         helperText={submitAttempted && !userData.lastname ? "Los apellidos son obligatorios" : ""}
+        inputProps={{
+          autoComplete: "off",
+          autoCorrect: "off"
+        }}
+        InputProps={{
+          inputMode: "text",
+        }}
       />
       <TextField
         margin="dense"
@@ -112,10 +199,14 @@ const UserForm: React.FC<UserFormProps> = ({
         type="date"
         fullWidth
         variant="outlined"
-        value={userData.birthdate}
-        onChange={handleInputChange}
+        defaultValue={userData.birthdate}
+        inputRef={birthdateRef}
+        onBlur={handleBlur}
         InputLabelProps={{
           shrink: true,
+        }}
+        inputProps={{
+          autoComplete: "off"
         }}
       />
       <TextField
@@ -125,11 +216,19 @@ const UserForm: React.FC<UserFormProps> = ({
         type={isAddMode ? "email" : "text"}
         fullWidth
         variant="outlined"
-        value={userData.email}
-        onChange={handleInputChange}
+        defaultValue={userData.email}
+        inputRef={emailRef}
+        onBlur={handleBlur}
         required
         error={submitAttempted && !userData.email}
         helperText={submitAttempted && !userData.email ? "El correo electrónico es obligatorio" : ""}
+        inputProps={{
+          autoComplete: "off",
+          autoCorrect: "off"
+        }}
+        InputProps={{
+          inputMode: "email",
+        }}
       />
       {isAddMode && (
         <>
@@ -140,8 +239,9 @@ const UserForm: React.FC<UserFormProps> = ({
             type="password"
             fullWidth
             variant="outlined"
-            value={userData.password}
-            onChange={handleInputChange}
+            defaultValue={userData.password}
+            inputRef={passwordRef}
+            onBlur={handleBlur}
             required
             error={submitAttempted && (!userData.password || userData.password.length < 6)}
             helperText={
@@ -151,6 +251,10 @@ const UserForm: React.FC<UserFormProps> = ({
                   ? "La contraseña debe tener al menos 6 caracteres"
                   : "Mínimo 6 caracteres."
             }
+            inputProps={{
+              autoComplete: "new-password",
+              autoCorrect: "off"
+            }}
           />
           <TextField
             margin="dense"
@@ -159,8 +263,9 @@ const UserForm: React.FC<UserFormProps> = ({
             type="password"
             fullWidth
             variant="outlined"
-            value={userData.passwordConfirm || ""}
-            onChange={handleInputChange}
+            defaultValue={userData.passwordConfirm || ""}
+            inputRef={passwordConfirmRef}
+            onBlur={handleBlur}
             required
             error={passwordsDoNotMatch}
             helperText={
@@ -168,6 +273,10 @@ const UserForm: React.FC<UserFormProps> = ({
                 ? "Las contraseñas no coinciden" 
                 : "Repite la contraseña para confirmar."
             }
+            inputProps={{
+              autoComplete: "new-password",
+              autoCorrect: "off"
+            }}
           />
         </>
       )}
@@ -175,11 +284,12 @@ const UserForm: React.FC<UserFormProps> = ({
         margin="dense"
         name="phone"
         label="Teléfono"
-        type="tel"
+        type="text"
         fullWidth
         variant="outlined"
-        value={userData.phone}
-        onChange={handleInputChange}
+        defaultValue={userData.phone}
+        inputRef={phoneRef}
+        onBlur={handleBlur}
         required
         error={submitAttempted && (!userData.phone || phoneError)}
         helperText={
@@ -189,10 +299,12 @@ const UserForm: React.FC<UserFormProps> = ({
               ? "Formato de teléfono inválido. Usa formato: 6XXXXXXXX, +34 6XXXXXXXX, etc."
               : ""
         }
+        inputProps={{
+          autoComplete: "off",
+          pattern: "^(\\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$",
+        }}
         InputProps={{
-          inputProps: {
-            pattern: "^(\\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$"
-          }
+          inputMode: "tel",
         }}
       />
       <FormControl fullWidth margin="dense" variant="outlined">
@@ -259,6 +371,9 @@ const UserForm: React.FC<UserFormProps> = ({
               {...params}
               variant="outlined"
               placeholder="Seleccionar roles"
+              InputProps={{
+                ...params.InputProps
+              }}
             />
           )}
           isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -271,8 +386,16 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        value={userData.job}
-        onChange={handleInputChange}
+        defaultValue={userData.job}
+        inputRef={jobRef}
+        onBlur={handleBlur}
+        inputProps={{
+          autoComplete: "off",
+          autoCorrect: "off"
+        }}
+        InputProps={{
+          inputMode: "text",
+        }}
       />
       <TextField
         margin="dense"
@@ -281,8 +404,16 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        value={userData.location}
-        onChange={handleInputChange}
+        defaultValue={userData.location}
+        inputRef={locationRef}
+        onBlur={handleBlur}
+        inputProps={{
+          autoComplete: "off",
+          autoCorrect: "off"
+        }}
+        InputProps={{
+          inputMode: "text",
+        }}
       />
     </>
   );

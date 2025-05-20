@@ -23,6 +23,11 @@ export function middleware(request: NextRequest) {
   const isAuthenticated = !!(authToken || hasFirebaseAuthCookie);
 
   const pathname = request.nextUrl.pathname;
+  
+  // No aplicar restricciones en la ruta de logout
+  if (pathname === '/logout') {
+    return NextResponse.next();
+  }
 
   if (!isAuthenticated) {
     const isProtectedRoute = Object.keys(protectedRoutes).some(route => 

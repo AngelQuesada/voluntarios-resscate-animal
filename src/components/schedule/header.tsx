@@ -22,7 +22,6 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useState, useEffect } from "react";
 
-
 export function Header() {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -37,27 +36,9 @@ export function Header() {
     setIsAdmin(user?.roles?.includes(3) || false);
   }, [user]);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      // Eliminar la cookie de autenticación
-      document.cookie =
-        "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-
-      // Cerrar sesión en Firebase
-      await signOut(auth);
-
-      // Pequeña pausa para asegurar que todo se limpie
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Redirigir y limpiar estado
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    } finally {
-      setIsLoggingOut(false);
-    }
+  const handleLogout = () => {
+    // En lugar de manejar el cierre de sesión aquí, redirigimos a la página dedicada de logout
+    router.push("/logout");
   };
 
   const handleAdminNavigation = () => {
@@ -155,6 +136,7 @@ export function Header() {
           </Box>
         </Toolbar>
       </AppBar>
+      {/* Dialog Cerrando sesión */}
       <Dialog
         open={isLoggingOut}
         PaperProps={{
@@ -170,7 +152,8 @@ export function Header() {
         <CircularProgress />
         <Typography variant="body1">Cerrando sesión...</Typography>
       </Dialog>
-      
+
+      {/* Dialog Cargando panel de administracion */}
       <Dialog
         open={isNavigatingToAdmin}
         PaperProps={{
@@ -184,7 +167,9 @@ export function Header() {
         }}
       >
         <CircularProgress />
-        <Typography variant="body1">Cargando panel de administración...</Typography>
+        <Typography variant="body1">
+          Cargando panel de administración...
+        </Typography>
       </Dialog>
     </>
   );

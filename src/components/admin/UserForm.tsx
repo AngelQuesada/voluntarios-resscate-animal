@@ -60,6 +60,9 @@ const UserForm: React.FC<UserFormProps> = ({
         required
         error={submitAttempted && !userData.username}
         helperText={submitAttempted && !userData.username ? "El nombre de usuario es obligatorio" : ""}
+        inputProps={{
+          autoCapitalize: "none"
+        }}
       />
       
       {/* Switch para habilitar/deshabilitar usuario */}

@@ -1,16 +1,83 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Asignación y desasignación de turnos por roles', () => {
+  // Hook de configuración para comprobar que el servidor está funcionando
+  test.beforeEach(async ({ page, request }) => {
+    // Intentar verificar que el servidor está respondiendo
+    try {
+      const response = await request.get(`${process.env.BASE_URL || 'http://localhost:3000'}`);
+      
+      if (!response.ok()) {
+        console.error(`⚠️ El servidor no responde correctamente. Código de estado: ${response.status()}`);
+        test.fail(true, `El servidor no está accesible o devuelve un error. Código: ${response.status()}`);
+      }
+      
+      // También detectar explícitamente respuestas 404
+      if (response.status() === 404) {
+        console.error('⚠️ La URL base devuelve un error 404. Verifica que el servidor esté ejecutándose y configurado correctamente.');
+        test.fail(true, 'La URL base devuelve un error 404');
+      }
+    } catch (error) {
+      console.error('⚠️ Error al comprobar el estado del servidor:', error);
+      test.fail(true, 'No se pudo comprobar el estado del servidor. Verifica que esté en ejecución.');
+    }
+  });
+  
   // Prueba para el rol de administrador
   test('Administrador inicia sesión, se asigna y desasigna un turno', async ({ page }) => {
     // Iniciar sesión como administrador
-    await page.goto(`${process.env.BASE_URL}`);
-    await page.fill('input[name="email"]', 'administradortest@voluntario.com');
-    await page.fill('input[name="password"]', 'testing');
-    await page.click('button[type="submit"]');
+    await page.goto(`${process.env.BASE_URL || 'http://localhost:3000'}`);
     
-    // Añadir tiempo de espera para la redirección
-    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    // Verificar si la página cargó correctamente o si hay un error 404
+    const is404 = await page.locator('text="404"').isVisible().catch(() => false);
+    
+    if (is404) {
+      console.error('⚠️ La página cargó con error 404. Comprueba que el servidor esté ejecutándose y que BASE_URL sea correcto.');
+      await page.screenshot({ path: './test-results/server-404-error.png' });
+      const html = await page.content();
+      console.log('HTML actual de la página 404:', html.substring(0, 500) + '...');
+      test.fail(true, 'La aplicación devolvió un error 404. Verifica que el servidor esté en ejecución.');
+      return;  // No continuar con el test
+    }
+    
+    // Esperar a que la página de inicio de sesión se cargue completamente
+    try {
+      // Esperamos primero a que aparezca el formulario con un timeout más largo
+      await page.waitForSelector('form', { timeout: 15000 });
+      
+      // Luego esperamos a que aparezcan los campos específicos
+      await page.waitForSelector('input#email', { timeout: 8000, state: 'visible' });
+      await page.waitForSelector('input#password', { timeout: 8000, state: 'visible' });
+    } catch (error) {
+      console.error('Error esperando los campos de inicio de sesión:', error);
+      // Capturar screenshot para depuración
+      await page.screenshot({ path: './test-results/login-form-not-found-detailed.png' });
+      
+      // Mostrar el HTML de la página para diagnóstico
+      const html = await page.content();
+      console.log('HTML de la página:', html.substring(0, 1000) + '...');
+      
+      throw new Error('No se encontró el formulario de inicio de sesión tras 15s de espera');
+    }
+    
+    try {
+      // Rellenar el formulario usando selectores ID más confiables
+      await page.fill('input#email', 'administradortest@voluntario.com');
+      await page.fill('input#password', 'testing');
+      await page.click('button[type="submit"]');
+    } catch (error) {
+      console.error('Error al intentar rellenar el formulario:', error);
+      await page.screenshot({ path: './test-results/form-fill-error.png' });
+      throw new Error('No se pudo completar el formulario de inicio de sesión');
+    }
+    
+    // Añadir tiempo de espera para la redirección con timeout más largo
+    await page.waitForURL(/\/schedule$/, { timeout: 20000 }).catch(async (error) => {
+      console.error('Timeout esperando redirección a /schedule:', error);
+      await page.screenshot({ path: './test-results/redirect-timeout.png' });
+      const currentUrl = page.url();
+      throw new Error(`No se produjo la redirección a /schedule. URL actual: ${currentUrl}`);
+    });
     
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
@@ -135,13 +202,46 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
   // Prueba para el rol de responsable
   test('Responsable inicia sesión, se asigna y desasigna un turno', async ({ page }) => {
     // Iniciar sesión como responsable
-    await page.goto(`${process.env.BASE_URL}`);
-    await page.fill('input[name="email"]', 'responsabletest@voluntario.com');
-    await page.fill('input[name="password"]', 'testing');
+    await page.goto(`${process.env.BASE_URL || 'http://localhost:3000'}`);
+    
+    // Verificar si la página cargó correctamente o si hay un error 404
+    const is404 = await page.locator('text="404"').isVisible().catch(() => false);
+    
+    if (is404) {
+      console.error('⚠️ La página cargó con error 404. Comprueba que el servidor esté ejecutándose y que BASE_URL sea correcto.');
+      await page.screenshot({ path: './test-results/server-404-error-responsable.png' });
+      test.fail(true, 'La aplicación devolvió un error 404. Verifica que el servidor esté en ejecución.');
+      return;  // No continuar con el test
+    }
+    
+    // Esperar a que la página de inicio de sesión se cargue completamente
+    try {
+      // Esperamos primero a que aparezca el formulario con un timeout más largo
+      await page.waitForSelector('form', { timeout: 15000 });
+      
+      // Luego esperamos a que aparezcan los campos específicos
+      await page.waitForSelector('input#email', { timeout: 8000, state: 'visible' });
+      await page.waitForSelector('input#password', { timeout: 8000, state: 'visible' });
+    } catch (error) {
+      console.error('Error esperando los campos de inicio de sesión:', error);
+      // Capturar screenshot para depuración
+      await page.screenshot({ path: './test-results/login-form-not-found-responsable-detailed.png' });
+      
+      throw new Error('No se encontró el formulario de inicio de sesión tras 15s de espera');
+    }
+    
+    // Rellenar el formulario usando selectores ID más confiables
+    await page.fill('input#email', 'responsabletest@voluntario.com');
+    await page.fill('input#password', 'testing');
     await page.click('button[type="submit"]');
     
-    // Añadir tiempo de espera para la redirección
-    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    // Añadir tiempo de espera para la redirección con timeout más largo
+    await page.waitForURL(/\/schedule$/, { timeout: 20000 }).catch(async (error) => {
+      console.error('Timeout esperando redirección a /schedule:', error);
+      await page.screenshot({ path: './test-results/redirect-timeout-responsable.png' });
+      const currentUrl = page.url();
+      throw new Error(`No se produjo la redirección a /schedule. URL actual: ${currentUrl}`);
+    });
     
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
@@ -237,13 +337,46 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
   // Prueba para el rol de voluntario
   test('Voluntario inicia sesión, se asigna y desasigna un turno', async ({ page }) => {
     // Iniciar sesión como voluntario
-    await page.goto(`${process.env.BASE_URL}`);
-    await page.fill('input[name="email"]', 'voluntariotest@voluntario.com');
-    await page.fill('input[name="password"]', 'testing');
+    await page.goto(`${process.env.BASE_URL || 'http://localhost:3000'}`);
+    
+    // Verificar si la página cargó correctamente o si hay un error 404
+    const is404 = await page.locator('text="404"').isVisible().catch(() => false);
+    
+    if (is404) {
+      console.error('⚠️ La página cargó con error 404. Comprueba que el servidor esté ejecutándose y que BASE_URL sea correcto.');
+      await page.screenshot({ path: './test-results/server-404-error-voluntario.png' });
+      test.fail(true, 'La aplicación devolvió un error 404. Verifica que el servidor esté en ejecución.');
+      return;  // No continuar con el test
+    }
+    
+    // Esperar a que la página de inicio de sesión se cargue completamente
+    try {
+      // Esperamos primero a que aparezca el formulario con un timeout más largo
+      await page.waitForSelector('form', { timeout: 15000 });
+      
+      // Luego esperamos a que aparezcan los campos específicos
+      await page.waitForSelector('input#email', { timeout: 8000, state: 'visible' });
+      await page.waitForSelector('input#password', { timeout: 8000, state: 'visible' });
+    } catch (error) {
+      console.error('Error esperando los campos de inicio de sesión:', error);
+      // Capturar screenshot para depuración
+      await page.screenshot({ path: './test-results/login-form-not-found-voluntario-detailed.png' });
+      
+      throw new Error('No se encontró el formulario de inicio de sesión tras 15s de espera');
+    }
+    
+    // Rellenar el formulario usando selectores ID más confiables
+    await page.fill('input#email', 'voluntariotest@voluntario.com');
+    await page.fill('input#password', 'testing');
     await page.click('button[type="submit"]');
     
-    // Añadir tiempo de espera para la redirección
-    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    // Añadir tiempo de espera para la redirección con timeout más largo
+    await page.waitForURL(/\/schedule$/, { timeout: 20000 }).catch(async (error) => {
+      console.error('Timeout esperando redirección a /schedule:', error);
+      await page.screenshot({ path: './test-results/redirect-timeout-voluntario.png' });
+      const currentUrl = page.url();
+      throw new Error(`No se produjo la redirección a /schedule. URL actual: ${currentUrl}`);
+    });
     
     // Verificar que se redirige a /schedule
     await expect(page).toHaveURL(/\/schedule$/);
@@ -291,7 +424,7 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
       const button = addButtons[0];
       
       // Obtener el índice de la fila que contiene el botón de forma segura
-      // para evitar "tr is possibly null"
+      // para evitar "tr is posiblemente null"
       const rowIndex = await button.evaluate((btn) => {
         const tr = btn.closest('tr');
         if (!tr || !tr.parentElement) return -1;

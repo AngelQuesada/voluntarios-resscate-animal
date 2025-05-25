@@ -64,52 +64,6 @@ const UserForm: React.FC<UserFormProps> = ({
     [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, passwordRef, passwordConfirmRef, phoneRef, jobRef, locationRef] :
     [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, phoneRef, jobRef, locationRef];
 
-  // Esta función conecta los campos para la navegación
-  useEffect(() => {
-    // Agregar oyentes para manejar la navegación del teclado
-    const fields = inputFieldsOrder.filter(ref => ref.current);
-
-    fields.forEach((fieldRef, index) => {
-      if (!fieldRef.current) return;
-      
-      // Eliminar primero los event listeners anteriores para evitar duplicados
-      const element = fieldRef.current;
-      
-      // element.addEventListener('keydown', (e: KeyboardEvent) => {
-      //   // Solo manejar la tecla Enter, Tab o ir a siguiente desde el teclado móvil
-      //   if (e.key === 'Enter') {
-      //     e.preventDefault();
-      //     const nextField = fields[index + 1];
-      //     if (nextField && nextField.current) {
-      //       nextField.current.focus();
-      //     }
-      //   }
-      // });
-    });
-
-    fields.forEach((fieldRef, index) => {
-      if (!fieldRef.current) return;
-      
-      if (index < fields.length - 1) {
-        fieldRef.current.setAttribute('enterkeyhint', 'next');
-      } else {
-        fieldRef.current.setAttribute('enterkeyhint', 'done');
-      }
-    });
-
-    // Limpiar event listeners al desmontar
-    return () => {
-      fields.forEach(fieldRef => {
-        if (fieldRef.current) {
-          // const clone = fieldRef.current.cloneNode(true);
-          // if (fieldRef.current.parentNode) {
-          //   fieldRef.current.parentNode.replaceChild(clone, fieldRef.current);
-          // }
-        }
-      });
-    };
-  }, [isAddMode]);
-
   return (
     <>
       <TextField
@@ -377,6 +331,7 @@ const UserForm: React.FC<UserFormProps> = ({
             />
           )}
           isOptionEqualToValue={(option, value) => option.id === value.id}
+          selectOnFocus={false} // <--- AÑADIR ESTA LÍNEA
         />
       </FormControl>
       <TextField

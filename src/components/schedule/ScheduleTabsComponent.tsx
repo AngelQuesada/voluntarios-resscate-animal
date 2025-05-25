@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, Tab, Box, Badge } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import { triggerVibration } from '@/lib/vibration'; // Added import
 
 interface ScheduleTabsProps {
   activeTab: number;
@@ -14,11 +15,17 @@ const ScheduleTabsComponent: React.FC<ScheduleTabsProps> = ({
   myShiftsCount,
   handleTabChange,
 }) => {
+  // Wrapped original handleTabChange to add vibration
+  const handleTabChangeWithVibration = (event: React.SyntheticEvent, newValue: number) => {
+    triggerVibration(30); // Added vibration call
+    handleTabChange(event, newValue); // Call original handler
+  };
+
   return (
     <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs
           value={activeTab}
-          onChange={handleTabChange}
+          onChange={handleTabChangeWithVibration} // Updated to use the new handler
           aria-label="Pestañas de calendario"
           variant="fullWidth"
           indicatorColor="primary"

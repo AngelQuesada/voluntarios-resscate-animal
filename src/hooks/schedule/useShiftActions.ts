@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useModifyShiftMutation, ShiftAssignment } from "@/store/api/shiftsApi";
+import { triggerVibration } from '@/lib/vibration'; // Added import
 import { UserRoles } from "@/lib/constants";
 import { CurrentUser, User } from '@/types/common';
 import { format, parseISO } from 'date-fns';
@@ -168,6 +169,7 @@ export function useShiftActions({
   };
 
   const confirmShiftAction = async () => {
+    triggerVibration(50); // Added vibration
     if (shiftToAction && currentUser && currentUser.uid) {
       if (!currentUser.name || !currentUser.lastname) {
         showSnackbar("No se puede realizar la acción, falta información del usuario (nombre/apellido).", "warning");
@@ -210,6 +212,7 @@ export function useShiftActions({
   };
 
   const confirmRemoveUser = async () => {
+    triggerVibration(50); // Added vibration
     if (userToRemoveDetails && currentUser?.roles?.includes(UserRoles.ADMINISTRADOR)) {
       const { uid, name, dateKey, shiftKey } = userToRemoveDetails;
       setIsRemovingUser(true);
@@ -236,6 +239,7 @@ export function useShiftActions({
   };
 
   const confirmAddUserToShift = async (userId: string) => {
+    triggerVibration(50); // Added vibration
     if (shiftForUserAssignment && currentUser?.roles?.includes(UserRoles.ADMINISTRADOR)) {
       const userToAdd = usersMap[userId];
       if (!userToAdd) {

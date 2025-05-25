@@ -41,42 +41,23 @@ const UserForm: React.FC<UserFormProps> = ({
     submitAttempted && 
     userData.password !== (userData.passwordConfirm || "");
     
-  // Referencias para los campos de texto para mantener el estado del formulario en un componente no controlado
-  const usernameRef = useRef<HTMLInputElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const lastnameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
-  const jobRef = useRef<HTMLInputElement>(null);
-  const locationRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-  const passwordConfirmRef = useRef<HTMLInputElement>(null);
-  const birthdateRef = useRef<HTMLInputElement>(null);
-  
   // Manejar los cambios en el formulario al perder el foco (onBlur) en lugar de en cada tecla
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    handleChange(e as any);
-  };
-
-  // Configurar el orden de los elementos del formulario
-  const inputFieldsOrder = isAddMode ? 
-    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, passwordRef, passwordConfirmRef, phoneRef, jobRef, locationRef] :
-    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, phoneRef, jobRef, locationRef];
+  // const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  //   const { name, value } = e.target;
+  //   handleChange(e as any);
+  // };
 
   return (
     <>
       <TextField
-        autoFocus={isAddMode}
         margin="dense"
         name="username"
         label="Nombre de Usuario"
         type="text"
         fullWidth
         variant="outlined"
-        defaultValue={userData.username}
-        inputRef={usernameRef}
-        onBlur={handleBlur}
+        value={userData.username || ''}
+        onChange={handleChange}
         required
         error={submitAttempted && !userData.username}
         helperText={submitAttempted && !userData.username ? "El nombre de usuario es obligatorio" : ""}
@@ -111,9 +92,8 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        defaultValue={userData.name}
-        inputRef={nameRef}
-        onBlur={handleBlur}
+        value={userData.name || ''}
+        onChange={handleChange}
         required
         error={submitAttempted && !userData.name}
         helperText={submitAttempted && !userData.name ? "El nombre es obligatorio" : ""}
@@ -132,9 +112,8 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        defaultValue={userData.lastname}
-        inputRef={lastnameRef}
-        onBlur={handleBlur}
+        value={userData.lastname || ''}
+        onChange={handleChange}
         required
         error={submitAttempted && !userData.lastname}
         helperText={submitAttempted && !userData.lastname ? "Los apellidos son obligatorios" : ""}
@@ -153,9 +132,8 @@ const UserForm: React.FC<UserFormProps> = ({
         type="date"
         fullWidth
         variant="outlined"
-        defaultValue={userData.birthdate}
-        inputRef={birthdateRef}
-        onBlur={handleBlur}
+        value={userData.birthdate || ''}
+        onChange={handleChange}
         InputLabelProps={{
           shrink: true,
         }}
@@ -170,9 +148,8 @@ const UserForm: React.FC<UserFormProps> = ({
         type={isAddMode ? "email" : "text"}
         fullWidth
         variant="outlined"
-        defaultValue={userData.email}
-        inputRef={emailRef}
-        onBlur={handleBlur}
+        value={userData.email || ''}
+        onChange={handleChange}
         required
         error={submitAttempted && !userData.email}
         helperText={submitAttempted && !userData.email ? "El correo electrónico es obligatorio" : ""}
@@ -193,9 +170,8 @@ const UserForm: React.FC<UserFormProps> = ({
             type="password"
             fullWidth
             variant="outlined"
-            defaultValue={userData.password}
-            inputRef={passwordRef}
-            onBlur={handleBlur}
+            value={userData.password || ''}
+            onChange={handleChange}
             required
             error={submitAttempted && (!userData.password || userData.password.length < 6)}
             helperText={
@@ -217,9 +193,8 @@ const UserForm: React.FC<UserFormProps> = ({
             type="password"
             fullWidth
             variant="outlined"
-            defaultValue={userData.passwordConfirm || ""}
-            inputRef={passwordConfirmRef}
-            onBlur={handleBlur}
+            value={userData.passwordConfirm || ''}
+            onChange={handleChange}
             required
             error={passwordsDoNotMatch}
             helperText={
@@ -241,9 +216,8 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        defaultValue={userData.phone}
-        inputRef={phoneRef}
-        onBlur={handleBlur}
+        value={userData.phone || ''}
+        onChange={handleChange}
         required
         error={submitAttempted && (!userData.phone || phoneError)}
         helperText={
@@ -341,9 +315,8 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        defaultValue={userData.job}
-        inputRef={jobRef}
-        onBlur={handleBlur}
+        value={userData.job || ''}
+        onChange={handleChange}
         inputProps={{
           autoComplete: "off",
           autoCorrect: "off"
@@ -359,9 +332,8 @@ const UserForm: React.FC<UserFormProps> = ({
         type="text"
         fullWidth
         variant="outlined"
-        defaultValue={userData.location}
-        inputRef={locationRef}
-        onBlur={handleBlur}
+        value={userData.location || ''}
+        onChange={handleChange}
         inputProps={{
           autoComplete: "off",
           autoCorrect: "off"

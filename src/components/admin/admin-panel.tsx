@@ -31,6 +31,7 @@ import ContactPhoneIcon from "@mui/icons-material/ContactPhone";
 import HistoryIcon from "@mui/icons-material/History";
 import PeopleIcon from "@mui/icons-material/People";
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import { triggerVibration } from '@/lib/vibration'; // Added import
 import { useAdminPanel } from "@/hooks/use-admin-panel";
 import NotificationSnackbar from "../schedule/NotificationSnackbar";
 import { UserRoles, getRoleName } from "@/lib/constants";
@@ -76,6 +77,7 @@ export function AdminPanel() {
   const isMobile = useIsMobile();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    triggerVibration(30); // Added vibration
     setActiveTab(newValue);
   };
 
@@ -139,7 +141,10 @@ export function AdminPanel() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setIsAddDialogOpen(true)}
+          onClick={() => {
+            triggerVibration(45);
+            setIsAddDialogOpen(true);
+          }}
         >
           Añadir Voluntario
         </Button>

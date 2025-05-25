@@ -5,6 +5,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CircleIcon from '@mui/icons-material/Circle';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import { triggerVibration } from '@/lib/vibration'; // Added import
 import ShiftAssignmentList from './ShiftAssignmentList';
 import { ShiftAssignment } from '@/store/api/shiftsApi';
 import { CurrentUser, User } from '@/types/common';
@@ -122,7 +123,10 @@ const ShiftRow: React.FC<ShiftRowProps> = ({
               currentUser && (
                 <Tooltip title={isCurrentUserAssigned ? "Eliminarme de este turno" : "Añadirme a este turno"}>
                   <IconButton
-                    onClick={() => initiateShiftAction(dayKey, shiftKey)}
+                    onClick={() => {
+                      triggerVibration(40);
+                      initiateShiftAction(dayKey, shiftKey);
+                    }}
                     color={isCurrentUserAssigned ? "error" : "primary"}
                     size="small"
                   >

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { User } from '../types/common';
 import { db } from '@/lib/firebase';
+import { triggerVibration } from '@/lib/vibration'; // Added import
 import { doc, setDoc, deleteDoc, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { UserRoles } from "@/lib/constants";
 
@@ -162,6 +163,7 @@ export const useAdminPanel = () => {
   };
 
   const handleAddUser = async () => {
+    triggerVibration(50);
     setFormError(null);
     setAddSubmitAttempted(true);
     
@@ -311,6 +313,7 @@ export const useAdminPanel = () => {
   };
 
   const handleEditUser = async () => {
+    triggerVibration(50);
     setFormError(null);
     setEditSubmitAttempted(true);
     

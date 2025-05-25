@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { TextField, Box, Alert, FormHelperText } from "@mui/material";
+import { TextField, Box, Alert } from "@mui/material";
 import SubmitButton from "./SubmitButton";
+import { triggerVibration } from '@/lib/vibration';
 import { textFieldStyles } from "@/styles/formStyles";
 
 interface SignInFormProps {
@@ -65,6 +66,7 @@ const SignInForm = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    triggerVibration(50);
     e.preventDefault();
     setSubmitAttempted(true);
 

@@ -75,16 +75,16 @@ const UserForm: React.FC<UserFormProps> = ({
       // Eliminar primero los event listeners anteriores para evitar duplicados
       const element = fieldRef.current;
       
-      element.addEventListener('keydown', (e: KeyboardEvent) => {
-        // Solo manejar la tecla Enter, Tab o ir a siguiente desde el teclado móvil
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const nextField = fields[index + 1];
-          if (nextField && nextField.current) {
-            nextField.current.focus();
-          }
-        }
-      });
+      // element.addEventListener('keydown', (e: KeyboardEvent) => {
+      //   // Solo manejar la tecla Enter, Tab o ir a siguiente desde el teclado móvil
+      //   if (e.key === 'Enter') {
+      //     e.preventDefault();
+      //     const nextField = fields[index + 1];
+      //     if (nextField && nextField.current) {
+      //       nextField.current.focus();
+      //     }
+      //   }
+      // });
     });
 
     fields.forEach((fieldRef, index) => {
@@ -101,10 +101,10 @@ const UserForm: React.FC<UserFormProps> = ({
     return () => {
       fields.forEach(fieldRef => {
         if (fieldRef.current) {
-          const clone = fieldRef.current.cloneNode(true);
-          if (fieldRef.current.parentNode) {
-            fieldRef.current.parentNode.replaceChild(clone, fieldRef.current);
-          }
+          // const clone = fieldRef.current.cloneNode(true);
+          // if (fieldRef.current.parentNode) {
+          //   fieldRef.current.parentNode.replaceChild(clone, fieldRef.current);
+          // }
         }
       });
     };

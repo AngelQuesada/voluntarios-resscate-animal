@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from "react";
-import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip, Switch, FormControlLabel } from "@mui/material";
+import React, { useRef, useEffect, useState } from "react";
+import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip, Switch, FormControlLabel, Button } from "@mui/material";
 import { UserRoles } from "@/lib/constants";
 
 // Función para validar formato de número de teléfono español
@@ -33,13 +33,20 @@ const UserForm: React.FC<UserFormProps> = ({
   handleEnabledSwitchChange,
   submitAttempted = false
 }) => {
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+
   // Validación del teléfono
   const phoneError = userData.phone && !isValidPhone(userData.phone) && submitAttempted;
   
   // Validación de contraseñas
-  const passwordsDoNotMatch = isAddMode && 
-    submitAttempted && 
+  const passwordsDoNotMatch = (isAddMode || (showPasswordFields && !isAddMode)) &&
+    submitAttempted &&
     userData.password !== (userData.passwordConfirm || "");
+  
+  const passwordMinLengthError = (isAddMode || (showPasswordFields && !isAddMode)) &&
+    submitAttempted &&
+    userData.password &&
+    userData.password.length < 6;
     
   // Referencias para los campos de texto para mantener el estado del formulario en un componente no controlado
   const usernameRef = useRef<HTMLInputElement>(null);
@@ -60,9 +67,11 @@ const UserForm: React.FC<UserFormProps> = ({
   };
 
   // Configurar el orden de los elementos del formulario
-  const inputFieldsOrder = isAddMode ? 
-    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, passwordRef, passwordConfirmRef, phoneRef, jobRef, locationRef] :
-    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, phoneRef, jobRef, locationRef];
+  const inputFieldsOrder = isAddMode 
+    ? [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, passwordRef, passwordConfirmRef, phoneRef, jobRef, locationRef] 
+    : showPasswordFields 
+      ? [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, passwordRef, passwordConfirmRef, phoneRef, jobRef, locationRef]
+      : [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, phoneRef, jobRef, locationRef];
 
   // Esta función conecta los campos para la navegación
   useEffect(() => {
@@ -108,7 +117,7 @@ const UserForm: React.FC<UserFormProps> = ({
         }
       });
     };
-  }, [isAddMode]);
+  }, [isAddMode, showPasswordFields, inputFieldsOrder]);
 
   return (
     <>
@@ -230,7 +239,33 @@ const UserForm: React.FC<UserFormProps> = ({
           inputMode: "email",
         }}
       />
-      {isAddMode && (
+
+      {!isAddMode && (
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showPasswordFields}
+              onChange={(e) => {
+                setShowPasswordFields(e.target.checked);
+                if (!e.target.checked) {
+                  // Limpiar campos de contraseña en userData si se ocultan
+                  setUserData((prev: any) => ({
+                    ...prev,
+                    password: '',
+                    passwordConfirm: '',
+                  }));
+                }
+              }}
+              name="showPasswordFields"
+              color="primary"
+            />
+          }
+          label="Cambiar Contraseña"
+          sx={{ my: 1, display: 'block' }}
+        />
+      )}
+
+      {(isAddMode || (showPasswordFields && !isAddMode)) && (
         <>
           <TextField
             margin="dense"
@@ -239,15 +274,19 @@ const UserForm: React.FC<UserFormProps> = ({
             type="password"
             fullWidth
             variant="outlined"
-            defaultValue={userData.password}
+            // Asegurar que el valor se limpie si no está en modo añadir y se muestran los campos
+            defaultValue={isAddMode ? userData.password : (showPasswordFields ? userData.password : "")}
+            value={isAddMode ? undefined : (showPasswordFields ? userData.password : "")} // Control value when showPasswordFields changes
+            key={isAddMode ? "add-password" : (showPasswordFields ? "edit-password-visible" : "edit-password-hidden")} // Forzar re-renderizado y limpieza
             inputRef={passwordRef}
             onBlur={handleBlur}
-            required
-            error={submitAttempted && (!userData.password || userData.password.length < 6)}
+            onChange={handleChange} // Ensure handleChange is called to update userData
+            required={(isAddMode || showPasswordFields)}
+            error={(isAddMode && submitAttempted && !userData.password) || (showPasswordFields && !isAddMode && submitAttempted && !userData.password) || passwordMinLengthError}
             helperText={
-              submitAttempted && !userData.password 
-                ? "La contraseña es obligatoria" 
-                : submitAttempted && userData.password && userData.password.length < 6
+              ((isAddMode || (showPasswordFields && !isAddMode)) && submitAttempted && !userData.password)
+                ? "La contraseña es obligatoria"
+                : passwordMinLengthError
                   ? "La contraseña debe tener al menos 6 caracteres"
                   : "Mínimo 6 caracteres."
             }
@@ -263,14 +302,18 @@ const UserForm: React.FC<UserFormProps> = ({
             type="password"
             fullWidth
             variant="outlined"
-            defaultValue={userData.passwordConfirm || ""}
+            // Asegurar que el valor se limpie si no está en modo añadir y se muestran los campos
+            defaultValue={isAddMode ? (userData.passwordConfirm || "") : (showPasswordFields ? userData.passwordConfirm : "")}
+            value={isAddMode ? undefined : (showPasswordFields ? userData.passwordConfirm : "")} // Control value
+            key={isAddMode ? "add-password-confirm" : (showPasswordFields ? "edit-password-confirm-visible" : "edit-password-confirm-hidden")} // Forzar re-renderizado
             inputRef={passwordConfirmRef}
             onBlur={handleBlur}
-            required
+            onChange={handleChange} // Ensure handleChange is called to update userData
+            required={(isAddMode || showPasswordFields)}
             error={passwordsDoNotMatch}
             helperText={
               passwordsDoNotMatch
-                ? "Las contraseñas no coinciden" 
+                ? "Las contraseñas no coinciden"
                 : "Repite la contraseña para confirmar."
             }
             inputProps={{

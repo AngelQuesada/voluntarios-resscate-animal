@@ -22,6 +22,8 @@ interface EditUserInfoState {
   job: string;
   location: string;
   isEnabled: boolean;
+  password?: string; // Added for potential password change
+  passwordConfirm?: string; // Added for potential password change
 }
 
 interface NewUserInfoState {
@@ -72,7 +74,7 @@ export const useAdminPanel = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   
-  const [editUserInfo, setEditUserInfo] = useState<EditUserInfoState>({
+  const [editUserInfo, setEditUserInfo] = useState<EditUserInfoState>({ // Type now includes optional password fields
     username: '',
     roles: [],
     name: '',
@@ -83,6 +85,8 @@ export const useAdminPanel = () => {
     job: '',
     location: '',
     isEnabled: true,
+    password: '', // Initialize password
+    passwordConfirm: '' // Initialize passwordConfirm
   });
 
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -295,7 +299,7 @@ export const useAdminPanel = () => {
     setUserToEdit(user);
     const currentRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : []);
 
-    setEditUserInfo({
+    setEditUserInfo({ // Resetting state for new edit session
       username: user.username || '',
       roles: currentRoles,
       name: user.name || '',
@@ -306,6 +310,8 @@ export const useAdminPanel = () => {
       job: user.job || '',
       location: user.location || '',
       isEnabled: user.isEnabled !== false,
+      password: '', // Ensure password fields are cleared when opening dialog
+      passwordConfirm: '', // Ensure password fields are cleared when opening dialog
     });
     setIsEditDialogOpen(true);
     setFormError(null);

@@ -36,6 +36,48 @@ export async function GET(
   }
 }
 
+export async function PUT(
+  request: Request,
+  { params }: RequestContext
+) {
+  try {
+    const { newPassword } = await request.json();
+    const { uid } = params;
+
+    if (!newPassword || newPassword.length < 6) {
+      return NextResponse.json(
+        { error: 'La contraseña no cumple los requisitos mínimos', message: 'La contraseña debe tener al menos 6 caracteres.' },
+        { status: 400 }
+      );
+    }
+
+    initAdmin(); // Asegurar que Firebase Admin esté inicializado
+
+    await getAuth().updateUser(uid, {
+      password: newPassword,
+    });
+
+    return NextResponse.json(
+      { success: true, message: 'Contraseña actualizada correctamente' },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error('Error al actualizar la contraseña:', error);
+
+    if (error.code === 'auth/user-not-found') {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado', message: 'El usuario no existe en Firebase Authentication.' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Error al actualizar la contraseña', message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: RequestContext

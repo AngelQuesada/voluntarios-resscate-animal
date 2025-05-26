@@ -13,7 +13,7 @@ interface DialogComponentProps {
   open: boolean;
   onClose: () => void;
   title: string;
-  content?: React.ReactNode;
+  children?: React.ReactNode; // Changed from content to children
   contentText?: string;
   error?: string | null;
   actions: {
@@ -32,7 +32,7 @@ const DialogComponent: React.FC<DialogComponentProps> = ({
   open,
   onClose,
   title,
-  content,
+  children, // Changed from content to children
   contentText,
   error,
   actions,
@@ -60,7 +60,7 @@ const DialogComponent: React.FC<DialogComponentProps> = ({
             {contentText}
           </DialogContentText>
         )}
-        {content}
+        {children} {/* Changed from content to children */}
       </DialogContent>
       <DialogActions>
         {actions.map((action, index) => (

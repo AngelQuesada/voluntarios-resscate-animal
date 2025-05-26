@@ -131,21 +131,19 @@ export const useAdminPanel = () => {
     setPrioritizeResponsables(event.target.checked);
   };
 
-  const handleInputChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  const handleInputChange = useCallback((
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setNewUserInfo(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleEditInputChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  const handleEditInputChange = useCallback((
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setEditUserInfo(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
   const handleEnabledSwitchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewUserInfo(prev => ({

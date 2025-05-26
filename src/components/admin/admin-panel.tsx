@@ -426,16 +426,6 @@ export function AdminPanel() {
           open={isAddDialogOpen}
           onClose={() => setIsAddDialogOpen(false)}
           title="Añadir Nuevo Usuario"
-          content={
-            <UserForm
-              userData={newUserInfo}
-              handleChange={handleInputChange}
-              setUserData={setNewUserInfo}
-              isAddMode={true}
-              handleEnabledSwitchChange={handleEnabledSwitchChange}
-              submitAttempted={addSubmitAttempted}
-            />
-          }
           error={formError}
           actions={[
             { label: "Cancelar", onClick: () => setIsAddDialogOpen(false) },
@@ -446,22 +436,21 @@ export function AdminPanel() {
               color: "primary"
             }
           ]}
-        />
+        >
+          <UserForm
+            userData={newUserInfo}
+            handleChange={handleInputChange}
+            setUserData={setNewUserInfo}
+            isAddMode={true}
+            handleEnabledSwitchChange={handleEnabledSwitchChange}
+            submitAttempted={addSubmitAttempted}
+          />
+        </DialogComponent>
 
         <DialogComponent
           open={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
           title="Editar Usuario"
-          content={
-            <UserForm
-              userData={editUserInfo}
-              handleChange={handleEditInputChange}
-              setUserData={setEditUserInfo}
-              isAddMode={false}
-              handleEnabledSwitchChange={handleEditEnabledSwitchChange}
-              submitAttempted={editSubmitAttempted}
-            />
-          }
           error={formError}
           actions={[
             { 
@@ -477,7 +466,16 @@ export function AdminPanel() {
               disabled: isAddingUser
             }
           ]}
-        />
+        >
+          <UserForm
+            userData={editUserInfo}
+            handleChange={handleEditInputChange}
+            setUserData={setEditUserInfo}
+            isAddMode={false}
+            handleEnabledSwitchChange={handleEditEnabledSwitchChange}
+            submitAttempted={editSubmitAttempted}
+          />
+        </DialogComponent>
 
         <DialogComponent
           open={isDeleteDialogOpen}

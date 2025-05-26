@@ -25,7 +25,7 @@ interface UserFormProps {
   submitAttempted?: boolean;
 }
 
-const UserForm: React.FC<UserFormProps> = ({ 
+const UserForm: React.FC<UserFormProps> = React.memo(({ 
   userData, 
   handleChange, 
   setUserData, 

@@ -86,6 +86,16 @@ export default function ScheduleContent({
     }
   }, [isLoadingMoreDays, shouldLoadMoreDays, setVisibleDaysCount, allDaysToDisplay.length]);
 
+  // Convertir allUsersList al formato esperado por AddUserToShiftDialog
+  const formattedUsersForDialog = allUsersList.map(user => {
+    const fullUser = usersMap[user.id];
+    return {
+      ...fullUser,
+      id: user.id,
+      isEnabled: fullUser?.isEnabled
+    };
+  });
+
   // Manejo de errores
   if (authError || shiftsError) {
     return <Alert severity="error">{authError || "Error al cargar los turnos"}</Alert>;
@@ -325,7 +335,7 @@ export default function ScheduleContent({
         open={addUserDialogOpen}
         onClose={cancelAddUser}
         onAddUser={confirmAddUserToShift}
-        users={allUsersList}
+        users={formattedUsersForDialog}
         currentAssignments={
           shiftForUserAssignment && processedAssignments[shiftForUserAssignment.dateKey]?.[shiftForUserAssignment.shiftKey]
             ? (processedAssignments[shiftForUserAssignment.dateKey]![shiftForUserAssignment.shiftKey]! as { uid: string; name: string }[])

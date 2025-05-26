@@ -40,18 +40,18 @@ const SearchInput: React.FC<SearchInputProps> = ({
   }, [searchTerm, showSearchInput]);
 
   // Efecto para manejar el enfoque automático cuando showSearchInput cambia a true
-  useEffect(() => {
-    if (showSearchInput && inputRef.current && !isMobile) {
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          // Colocar cursor al final
-          const len = inputRef.current.value.length;
-          inputRef.current.setSelectionRange(len, len);
-        }
-      }, 10);
-    }
-  }, [showSearchInput, isMobile]);
+  // useEffect(() => {
+  //   if (showSearchInput && inputRef.current && !isMobile) {
+  //     setTimeout(() => {
+  //       if (inputRef.current) {
+  //         inputRef.current.focus();
+  //         // Colocar cursor al final
+  //         const len = inputRef.current.value.length;
+  //         inputRef.current.setSelectionRange(len, len);
+  //       }
+  //     }, 10);
+  //   }
+  // }, [showSearchInput, isMobile]);
 
   // Efecto para manejar clics fuera del componente
   useEffect(() => {
@@ -100,7 +100,6 @@ const SearchInput: React.FC<SearchInputProps> = ({
           inputRef={inputRef}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          autoFocus={showSearchInput}
           InputProps={{
             endAdornment: (
               <IconButton>
@@ -130,7 +129,6 @@ const SearchInput: React.FC<SearchInputProps> = ({
           inputRef={inputRef}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          autoFocus={showSearchInput}
           onKeyDown={(e) => {
             if (e.key === 'Escape' && handleClickAwaySearch) {
               e.preventDefault();

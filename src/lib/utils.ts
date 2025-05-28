@@ -51,3 +51,24 @@ export function isToday(date: Date | string): boolean {
     compareDate.getFullYear() === today.getFullYear()
   );
 }
+
+/**
+ * Calcula la edad basada en la fecha de nacimiento
+ * @param birthdate Fecha de nacimiento (string o Date)
+ * @returns Edad en años como number
+ */
+export function calculateAge(birthdate: string | Date): number {
+  if (!birthdate) return 0;
+  
+  const birthDateObj = typeof birthdate === 'string' ? new Date(birthdate) : birthdate;
+  const today = new Date();
+  
+  let age = today.getFullYear() - birthDateObj.getFullYear();
+  const monthDiff = today.getMonth() - birthDateObj.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+    age--;
+  }
+  
+  return age;
+}

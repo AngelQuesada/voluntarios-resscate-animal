@@ -28,7 +28,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PhoneIcon from '@mui/icons-material/Phone';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import { formatDate } from '@/lib/utils';
+import { formatDate, calculateAge } from '@/lib/utils';
 import { UserRoles, getRoleName } from '@/lib/constants';
 import { useUserDetailDialog } from '@/hooks/use-user-detail-dialog';
 
@@ -229,7 +229,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="text.secondary">
-                Fecha de nacimiento: <strong>{userData.birthdate ? formatDate(userData.birthdate) : 'No disponible'}</strong>
+                Edad: <strong>{userData.birthdate ? calculateAge(userData.birthdate) : 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Profesión: <strong>{userData.job || 'No disponible'}</strong>

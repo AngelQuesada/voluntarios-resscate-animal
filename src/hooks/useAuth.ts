@@ -3,6 +3,34 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
+import { UserRoles } from "@/lib/constants";
+
+// Configuración de duración de cookies de autenticación
+const AUTH_COOKIE_CONFIG = {
+  // Duraciones en segundos
+  MOBILE: {
+    STANDARD: 30 * 24 * 60 * 60, // 30 días para móviles (uso frecuente)
+    ADMIN: 7 * 24 * 60 * 60,     // 7 días para administradores en móvil
+  },
+  DESKTOP: {
+    STANDARD: 14 * 24 * 60 * 60, // 14 días para escritorio
+    ADMIN: 3 * 24 * 60 * 60,     // 3 días para administradores en escritorio
+  },
+  REMEMBER_ME: 90 * 24 * 60 * 60, // 90 días si el usuario marca "Recordarme"
+};
+
+// Función para determinar la duración de cookie apropiada
+const getCookieDuration = (isAdmin: boolean, isMobile: boolean, rememberMe: boolean = false) => {
+  if (rememberMe) {
+    return AUTH_COOKIE_CONFIG.REMEMBER_ME;
+  }
+  
+  if (isMobile) {
+    return isAdmin ? AUTH_COOKIE_CONFIG.MOBILE.ADMIN : AUTH_COOKIE_CONFIG.MOBILE.STANDARD;
+  } else {
+    return isAdmin ? AUTH_COOKIE_CONFIG.DESKTOP.ADMIN : AUTH_COOKIE_CONFIG.DESKTOP.STANDARD;
+  }
+};
 
 // Función para validar formato de email
 const isValidEmail = (email: string): boolean => {
@@ -17,7 +45,7 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent, rememberMe: boolean = false) => {
     e.preventDefault();
     setError(null);
     
@@ -47,8 +75,11 @@ export function useAuth() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
       // Verificar si el usuario está habilitado en Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid));
+      let isAdmin = false;
+      
       if (userDoc.exists()) {
         const userData = userDoc.data();
         if (userData.isEnabled === false) {
@@ -57,13 +88,36 @@ export function useAuth() {
           setIsLoading(false);
           return;
         }
+        
+        // Verificar si es administrador
+        isAdmin = userData.roles?.includes(UserRoles.ADMINISTRADOR) || false;
       }
       
       // Obtener el token del usuario
       const token = await user.getIdToken();
-      // Guardar el token en una cookie 
-      //TODO: Cambiar el tiempo de expiración
-      document.cookie = `auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;
+      
+      // Configurar duración de la cookie de forma inteligente
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const cookieMaxAge = getCookieDuration(isAdmin, isMobile, rememberMe);
+      
+      // Crear cookie con configuración de seguridad apropiada
+      const cookieFlags = [
+        `auth-token=${token}`,
+        'path=/',
+        `max-age=${cookieMaxAge}`,
+        'SameSite=Strict',
+        ...(window.location.protocol === 'https:' ? ['Secure'] : [])
+      ].join('; ');
+      
+      document.cookie = cookieFlags;
+      
+      const duration = Math.floor(cookieMaxAge / (24 * 60 * 60));
+      const userType = isAdmin ? 'Admin' : 'Usuario';
+      const deviceType = isMobile ? 'móvil' : 'escritorio';
+      const sessionType = rememberMe ? ' (Recordarme activado)' : '';
+      
+      console.log(`Cookie configurada: ${userType} en ${deviceType} por ${duration} días${sessionType}`);
+      
       router.push("/schedule");
     } catch (error: any) {
       console.error("Error Iniciando Sesión:", error);
@@ -79,6 +133,8 @@ export function useAuth() {
         default:
           setError("Ocurrió un error inesperado. Por favor, inténtalo de nuevo.");
       }
+      setIsLoading(false);
+    } finally {
       setIsLoading(false);
     }
   };

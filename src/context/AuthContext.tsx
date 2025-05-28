@@ -51,6 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const pathname = usePathname();
 
+  // Limpiar estados al desmontar o cambiar de página
+  useEffect(() => {
+    const cleanup = () => {
+      // Limpiar cualquier timeout pendiente
+      if (typeof window !== "undefined") {
+        const highestTimeoutId = setTimeout(";");
+        for (let i = 0; i < highestTimeoutId; i++) {
+          clearTimeout(i);
+        }
+      }
+    };
+
+    return cleanup;
+  }, [pathname]);
+
   // Control de la navegación hacia atrás
   useEffect(() => {
     // Solo aplicar esta lógica cuando ya se ha inicializado completamente
@@ -64,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
+      // Limpiar listener previo si existe
+      window.removeEventListener("popstate", handlePopState);
       window.addEventListener("popstate", handlePopState);
 
       return () => {
@@ -87,6 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [pathname, user, loading, isInitialized, router]);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       try {
         if (firebaseUser) {
@@ -126,28 +145,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.push("/");
           }
         }
+      } catch (error) {
+        console.error("Error en onAuthStateChanged:", error);
+        setUser(null);
       } finally {
-        // No establecer loading a false inmediatamente si estamos en una ruta protegida
-        // para evitar parpadeo de contenido no autorizado
+        // Limpiar cualquier timeout previo
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
+        // Determinar si estamos en una ruta protegida
         const isProtectedRoute =
           pathname !== "/" &&
           (pathname?.startsWith("/schedule") || pathname?.startsWith("/admin"));
 
+        // En móviles, dar un poco más de tiempo para la navegación
+        const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+        const delay = isMobile ? 200 : 100;
+
         // Si no hay usuario y estamos en una ruta protegida, mantener loading hasta la redirección
         if (!firebaseUser && isProtectedRoute) {
-          setTimeout(() => {
+          timeoutId = setTimeout(() => {
             setLoading(false);
             setIsInitialized(true);
-          }, 100);
+          }, delay);
         } else {
+          // Resolver el estado inmediatamente si no hay conflictos
           setLoading(false);
           setIsInitialized(true);
         }
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [router, isInitialized, pathname]);
+
+  // Agregar un timeout de seguridad para evitar loading infinito
+  useEffect(() => {
+    const maxLoadingTime = setTimeout(() => {
+      if (loading) {
+        console.warn("Loading timeout alcanzado, forzando fin del loading");
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    }, 10000); // 10 segundos máximo
+
+    return () => clearTimeout(maxLoadingTime);
+  }, [loading]);
 
   // Mostrar pantalla de carga durante la verificación de autenticación
   if (loading) {

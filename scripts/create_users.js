@@ -84,6 +84,7 @@ async function importUsersFromJson() {
       }
 
       // Preparar datos para Firestore (sin el email si ya está en Auth, y sin uid porque es el ID del doc)
+      const currentTimestamp = new Date().toISOString();
       const userDocumentData = {
         email, // Guardamos el email también en Firestore por consistencia con tu estructura User
         name,
@@ -91,7 +92,8 @@ async function importUsersFromJson() {
         roles,
         ...firestoreData, // El resto de los campos, incluyendo isEnabled
         uid: userAuthRecord.uid, // Aseguramos que el uid en Firestore coincida con el de Auth
-        createdAt: firestoreData.createdAt || new Date().toISOString(), // Añadir createdAt si no existe
+        createdAt: firestoreData.createdAt || currentTimestamp,
+        updatedAt: currentTimestamp, 
       };
       
       // Eliminar campos que no queremos duplicar o que no pertenecen a la colección users

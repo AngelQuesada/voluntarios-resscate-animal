@@ -40,7 +40,30 @@ export default async function handler(
       roles: finalRoles,
     });
 
-    return res.status(200).json({ uid: userRecord.uid });
+    // Guardar usuario en Firestore
+    const currentTimestamp = new Date().toISOString();
+    const userDocumentData = {
+      email,
+      username: userData.username || '',
+      name: userData.name || '',
+      lastname: userData.lastname || '',
+      birthdate: userData.birthdate || '',
+      phone: userData.phone || '',
+      job: userData.job || '',
+      location: userData.location || '',
+      roles: finalRoles,
+      isEnabled: userData.isEnabled !== undefined ? userData.isEnabled : true,
+      createdAt: currentTimestamp,
+      updatedAt: currentTimestamp
+    };
+
+    await admin.firestore().collection('users').doc(userRecord.uid).set(userDocumentData);
+
+    // Retornar el usuario completo
+    return res.status(200).json({ 
+      uid: userRecord.uid,
+      ...userDocumentData
+    });
   } catch (error: any) {
     console.error('Error creating user:', error);
     return res.status(500).json({

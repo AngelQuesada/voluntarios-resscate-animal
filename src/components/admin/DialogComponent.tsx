@@ -7,6 +7,7 @@ import {
   DialogActions,
   Button,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 
 interface DialogComponentProps {
@@ -23,6 +24,7 @@ interface DialogComponentProps {
     variant?: "text" | "outlined" | "contained";
     autoFocus?: boolean;
     disabled?: boolean;
+    loading?: boolean;
   }[];
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
   fullWidth?: boolean;
@@ -50,17 +52,17 @@ const DialogComponent: React.FC<DialogComponentProps> = ({
     >
       <DialogTitle id="dialog-title">{title}</DialogTitle>
       <DialogContent>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
         {contentText && (
           <DialogContentText id="dialog-description">
             {contentText}
           </DialogContentText>
         )}
         {content}
+        {error && (
+          <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
+            {error}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         {actions.map((action, index) => (
@@ -70,8 +72,10 @@ const DialogComponent: React.FC<DialogComponentProps> = ({
             color={action.color || "primary"}
             variant={action.variant || "text"}
             autoFocus={action.autoFocus}
+            disabled={action.disabled || action.loading}
+            startIcon={action.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
-            {action.label}
+            {action.loading ? "Procesando..." : action.label}
           </Button>
         ))}
       </DialogActions>

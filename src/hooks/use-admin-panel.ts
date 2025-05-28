@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import React from 'react';
 import { User } from '../types/common';
 import { db } from '@/lib/firebase';
-import { triggerVibration } from '@/lib/vibration'; // Added import
-import { doc, setDoc, deleteDoc, getDocs, collection, updateDoc } from 'firebase/firestore';
+import { triggerVibration } from '@/lib/vibration';
+import { doc, deleteDoc, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { UserRoles } from "@/lib/constants";
+import { UserInfoForForm } from "@/types/common";
 
 // Función para validar formato de número de teléfono español
 const isValidPhone = (phone: string): boolean => {
@@ -11,48 +13,32 @@ const isValidPhone = (phone: string): boolean => {
   return phoneRegex.test(phone);
 };
 
-interface EditUserInfoState {
-  username: string;
-  roles: number[];
-  name: string;
-  lastname: string;
-  birthdate: string;
-  email: string;
-  phone: string;
-  job: string;
-  location: string;
-  isEnabled: boolean;
-}
-
-interface NewUserInfoState {
-  username: string;
-  roles: number[];
-  name: string;
-  lastname: string;
-  birthdate: string;
-  email: string;
-  phone: string;
-  job: string;
-  location: string;
-  password: string;
+// Tipo extendido para el formulario con propiedades adicionales
+interface ExtendedUserFormData extends UserInfoForForm {
   passwordConfirm?: string;
-  isEnabled: boolean;
+  isEnabled?: boolean;
 }
 
 export const useAdminPanel = () => {
-  const [isAddingUser, setIsAddingUser] = useState(false);
-  const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-
-  // Estados para controlar cuando se ha intentado enviar el formulario
+  const [snackbarMessage, setSnackbarMessage] = useState<React.ReactNode>('');
   const [addSubmitAttempted, setAddSubmitAttempted] = useState(false);
   const [editSubmitAttempted, setEditSubmitAttempted] = useState(false);
-
-  const [newUserInfo, setNewUserInfo] = useState<NewUserInfoState>({
+  const [formError, setFormError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  
+  // Estados del formulario usando el tipo correcto
+  const [newUserInfo, setNewUserInfo] = useState<ExtendedUserFormData>({
     username: '',
     roles: [], 
     name: '',
@@ -65,14 +51,8 @@ export const useAdminPanel = () => {
     password: '',
     isEnabled: true,
   });
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [userToEdit, setUserToEdit] = useState<User | null>(null);
   
-  const [editUserInfo, setEditUserInfo] = useState<EditUserInfoState>({
+  const [editUserInfo, setEditUserInfo] = useState<ExtendedUserFormData>({
     username: '',
     roles: [],
     name: '',
@@ -85,170 +65,190 @@ export const useAdminPanel = () => {
     isEnabled: true,
   });
 
+  // Estados para contacto y detalles
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userDetailDialogOpen, setUserDetailDialogOpen] = useState(false);
   const [detailUser, setDetailUser] = useState<User | null>(null);
+
+  // Estados de paginación y búsqueda
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(12);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [prioritizeResponsables, setPrioritizeResponsables] = useState(false);
-  const [debounceSearchTerm, setDebounceSearchTerm] = useState(searchTerm);
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
+  // Cargar usuarios
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
     try {
+      setLoading(true);
       const querySnapshot = await getDocs(collection(db, 'users'));
-      const usersData = querySnapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-        uid: doc.id,
+      const usersData = querySnapshot.docs.map(doc => ({ 
+        uid: doc.id, 
+        ...doc.data() 
       })) as User[];
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
-      setFormError('Error al cargar los usuarios. Por favor, intenta de nuevo.');
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  // Reset validación cuando se cierra el diálogo
-  useEffect(() => {
-    if (!isAddDialogOpen) {
-      setAddSubmitAttempted(false);
-    }
-    if (!isEditDialogOpen) {
-      setEditSubmitAttempted(false);
-    }
-  }, [isAddDialogOpen, isEditDialogOpen]);
-
-  const handlePrioritizeResponsablesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setPrioritizeResponsables(event.target.checked);
   };
 
-  const handleInputChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  // Filtrado de usuarios
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = !searchTerm || 
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesRole = !prioritizeResponsables || 
+        (Array.isArray(user.roles) && user.roles.includes(UserRoles.RESPONSABLE));
+
+      return matchesSearch && matchesRole;
+    });
+  }, [users, searchTerm, prioritizeResponsables]);
+
+  // Manejadores de eventos del formulario
+  const handleInputChange = useCallback((
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setNewUserInfo(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleEditInputChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  const handleEditInputChange = useCallback((
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setEditUserInfo(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleEnabledSwitchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const memoizedSetNewUserInfo = useCallback((value: React.SetStateAction<ExtendedUserFormData>) => {
+    setNewUserInfo(value);
+  }, []);
+
+  const memoizedSetEditUserInfo = useCallback((value: React.SetStateAction<ExtendedUserFormData>) => {
+    setEditUserInfo(value);
+  }, []);
+
+  const handleEnabledSwitchChange = useCallback((checked: boolean) => {
+    setNewUserInfo(prev => ({ ...prev, isEnabled: checked }));
+  }, []);
+
+  const handleEditEnabledSwitchChange = useCallback((checked: boolean) => {
+    setEditUserInfo(prev => ({ ...prev, isEnabled: checked }));
+  }, []);
+
+  // Handlers memoizados para roles
+  const handleAddRoleChange = useCallback((roles: number[]) => {
     setNewUserInfo(prev => ({
       ...prev,
-      isEnabled: event.target.checked,
+      roles: roles
     }));
-  };
+  }, []);
 
-  const handleEditEnabledSwitchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditRoleChange = useCallback((roles: number[]) => {
     setEditUserInfo(prev => ({
       ...prev,
-      isEnabled: event.target.checked,
+      roles: roles
     }));
-  };
+  }, []);
 
+  // Validaciones
+  const validateUserInfo = useCallback((userInfo: any): string | null => {
+    const { email, name, username, phone, password } = userInfo;
+    
+    // Validaciones básicas requeridas
+    if (!email?.trim() || !name?.trim() || !username?.trim() || !phone?.trim()) {
+      return 'Todos los campos obligatorios deben estar completos';
+    }
+    
+    // Validación de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'El formato del email no es válido';
+    }
+
+    // Validación de teléfono
+    if (!isValidPhone(phone)) {
+      return 'El formato del teléfono no es válido';
+    }
+
+    // Validación de contraseña para nuevos usuarios
+    if (password !== undefined && password.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres';
+    }
+    
+    return null;
+  }, []);
+
+  // Agregar usuario
   const handleAddUser = async () => {
-    triggerVibration(50);
+    // PRIMERO: Mostrar spinner inmediatamente al hacer clic
+    setIsAddingUser(true);
+    
+    // Pequeño delay para asegurar que el spinner se muestre antes de las validaciones
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     setFormError(null);
     setAddSubmitAttempted(true);
     
-    if (
-      !newUserInfo.username ||
-      !newUserInfo.name ||
-      !newUserInfo.lastname ||
-      !newUserInfo.email ||
-      !newUserInfo.phone ||
-      !newUserInfo.password
-    ) {
-      setFormError(
-        'Por favor, rellena todos los campos obligatorios, incluida la contraseña.'
-      );
+    const validationError = validateUserInfo(newUserInfo);
+    if (validationError) {
+      setFormError(validationError);
+      setIsAddingUser(false);
       return;
     }
 
-    // Validar que las contraseñas coinciden
+    // Validar confirmación de contraseña
     if (newUserInfo.password !== newUserInfo.passwordConfirm) {
-      setFormError('Las contraseñas no coinciden. Por favor, verifica ambas contraseñas.');
+      setFormError('Las contraseñas no coinciden');
+      setIsAddingUser(false);
       return;
-    }
-
-    // Validar longitud mínima de contraseña
-    if (newUserInfo.password.length < 6) {
-      setFormError('La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-
-    // Validar formato de número de teléfono
-    if (!isValidPhone(newUserInfo.phone)) {
-      setFormError('El formato del número de teléfono no es válido. Asegúrate de usar un número español válido.');
-      return;
-    }
-
-    setIsAddingUser(true);
-
-    let finalRoles = [...(newUserInfo.roles || [])];
-    if (!finalRoles.includes(UserRoles.VOLUNTARIO)) {
-      finalRoles.push(UserRoles.VOLUNTARIO);
     }
 
     try {
+      // Usar la API del servidor para crear el usuario
       const response = await fetch('/api/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          ...newUserInfo, 
-          roles: finalRoles,
-          role: finalRoles[0] || UserRoles.VOLUNTARIO
+        body: JSON.stringify({
+          email: newUserInfo.email,
+          password: newUserInfo.password,
+          username: newUserInfo.username,
+          name: newUserInfo.name,
+          lastname: newUserInfo.lastname,
+          birthdate: newUserInfo.birthdate,
+          phone: newUserInfo.phone,
+          job: newUserInfo.job,
+          location: newUserInfo.location,
+          roles: newUserInfo.roles,
+          isEnabled: newUserInfo.isEnabled,
         }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`Error al crear usuario: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al crear usuario');
       }
 
-      const { uid } = await response.json();
-      const user = { uid };
-
-      const userDataForFirestore = {
-        uid: user.uid,
-        username: newUserInfo.username,
-        role: finalRoles[0] || UserRoles.VOLUNTARIO,
-        roles: finalRoles,
-        name: newUserInfo.name,
-        lastname: newUserInfo.lastname,
-        birthdate: newUserInfo.birthdate,
-        email: newUserInfo.email,
-        phone: newUserInfo.phone,
-        job: newUserInfo.job,
-        location: newUserInfo.location,
-        createdAt: new Date().toISOString(),
-        isEnabled: newUserInfo.isEnabled,
-      };
-
-      await setDoc(doc(db, 'users', user.uid), userDataForFirestore);
-
+      const userData = await response.json();
+      
+      // Actualizar el estado local
+      setUsers(prev => [...prev, userData] as User[]);
+      setIsAddDialogOpen(false);
       setNewUserInfo({
         username: '',
-        roles: [UserRoles.VOLUNTARIO],
+        roles: [],
         name: '',
         lastname: '',
         birthdate: '',
@@ -259,45 +259,48 @@ export const useAdminPanel = () => {
         password: '',
         isEnabled: true,
       });
-
-      setIsAddDialogOpen(false);
       setAddSubmitAttempted(false);
-
-      fetchUsers();
-      setSnackbarMessage('Usuario creado correctamente');
+      
+      // Mensaje personalizado con nombre y apellidos en negrita
+      const fullName = `${newUserInfo.name} ${newUserInfo.lastname}`.trim();
+      setSnackbarMessage(
+        React.createElement(
+          React.Fragment,
+          null,
+          'El usuario ',
+          React.createElement('strong', null, fullName),
+          ' se agregó correctamente'
+        )
+      );
       setSnackbarOpen(true);
+      triggerVibration(100);
     } catch (error: any) {
       console.error('Error adding user:', error);
-      if (error.code === 'auth/email-already-in-use') {
-        setFormError('El correo electrónico ya está en uso.');
-      } else if (error.code === 'auth/weak-password') {
-        setFormError('La contraseña debe tener al menos 6 caracteres.');
-      } else {
-        setFormError('Error al crear el usuario. Verifica la consola.');
+      
+      // Mapear errores comunes
+      let errorMessage = 'Error al agregar usuario';
+      if (error.message.includes('email-already-in-use') || error.message.includes('already exists')) {
+        errorMessage = 'Este email ya está registrado';
+      } else if (error.message.includes('weak-password')) {
+        errorMessage = 'La contraseña es muy débil';
+      } else if (error.message.includes('invalid-email')) {
+        errorMessage = 'El formato del email no es válido';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+      
+      setFormError(errorMessage);
     } finally {
       setIsAddingUser(false);
     }
   };
 
-  const openDeleteDialog = (user: User) => {
-    setUserToDelete(user);
-    setIsDeleteDialogOpen(true);
-    setDeleteError(null);
-  };
-
-  const closeDeleteDialog = () => {
-    setUserToDelete(null);
-    setIsDeleteDialogOpen(false);
-  };
-
+  // Editar usuario
   const openEditDialog = (user: User) => {
     setUserToEdit(user);
-    const currentRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : []);
-
     setEditUserInfo({
       username: user.username || '',
-      roles: currentRoles,
+      roles: Array.isArray(user.roles) ? user.roles.filter(role => role !== UserRoles.VOLUNTARIO) : [],
       name: user.name || '',
       lastname: user.lastname || '',
       birthdate: user.birthdate || '',
@@ -308,108 +311,112 @@ export const useAdminPanel = () => {
       isEnabled: user.isEnabled !== false,
     });
     setIsEditDialogOpen(true);
-    setFormError(null);
     setEditSubmitAttempted(false);
+    setFormError(null);
   };
 
   const handleEditUser = async () => {
-    triggerVibration(50);
-    setFormError(null);
-    setEditSubmitAttempted(true);
-    
     if (!userToEdit) return;
 
-    if (
-      !editUserInfo.username ||
-      !editUserInfo.name ||
-      !editUserInfo.lastname ||
-      !editUserInfo.email ||
-      !editUserInfo.phone
-    ) {
-      setFormError('Por favor, rellena todos los campos obligatorios.');
+    setEditSubmitAttempted(true);
+    const validationError = validateUserInfo(editUserInfo);
+    
+    if (validationError) {
+      setFormError(validationError);
       return;
     }
 
-    // Validar formato de número de teléfono
-    if (!isValidPhone(editUserInfo.phone)) {
-      setFormError('El formato del número de teléfono no es válido. Asegúrate de usar un número español válido.');
-      return;
-    }
-
-    // Usar los roles seleccionados directamente
-    const finalRoles = editUserInfo.roles;
+    setIsEditingUser(true);
+    setFormError(null);
 
     try {
-      const userRef = doc(db, 'users', userToEdit.uid);
-      // Actualizar solo los campos necesarios en Firestore
-      await updateDoc(userRef, {
-        username: editUserInfo.username,
-        roles: finalRoles,
-        name: editUserInfo.name,
-        lastname: editUserInfo.lastname,
-        birthdate: editUserInfo.birthdate,
-        email: editUserInfo.email,
-        phone: editUserInfo.phone,
-        job: editUserInfo.job,
-        location: editUserInfo.location,
-        isEnabled: editUserInfo.isEnabled,
-      });
+      const finalRoles = [UserRoles.VOLUNTARIO, ...editUserInfo.roles];
+      const currentTimestamp = new Date().toISOString();
+      const userData = {
+        ...editUserInfo,
+        roles: [...new Set(finalRoles)],
+        updatedAt: currentTimestamp
+      };
 
+      await updateDoc(doc(db, 'users', userToEdit.uid), userData);
+      
+      setUsers(prev => prev.map(user => 
+        user.uid === userToEdit.uid 
+          ? { ...user, ...userData }
+          : user
+      ));
+      
       setIsEditDialogOpen(false);
       setUserToEdit(null);
       setEditSubmitAttempted(false);
       
-      fetchUsers();
-      setSnackbarMessage('Usuario actualizado correctamente');
+      // Mensaje personalizado con nombre y apellidos en negrita
+      const fullName = `${editUserInfo.name} ${editUserInfo.lastname}`.trim();
+      setSnackbarMessage(
+        React.createElement(
+          React.Fragment,
+          null,
+          'El usuario ',
+          React.createElement('strong', null, fullName),
+          ' se actualizó correctamente'
+        )
+      );
       setSnackbarOpen(true);
-    } catch (error) {
+      triggerVibration(100);
+    } catch (error: any) {
       console.error('Error updating user:', error);
-      setFormError('Error al actualizar el usuario. Verifica la consola.');
+      setFormError(error.message || 'Error al actualizar usuario');
+    } finally {
+      setIsEditingUser(false);
     }
+  };
+
+  // Eliminar usuario
+  const openDeleteDialog = (user: User) => {
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
+    setDeleteError(null);
+  };
+
+  const closeDeleteDialog = () => {
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
+    setDeleteError(null);
   };
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
-    setDeleteError(null);
+
     setIsDeletingUser(true);
+    setDeleteError(null);
 
     try {
-      // 1. Llamar a la API para eliminar el usuario de Firebase Auth
-      const response = await fetch(`/api/users/${userToDelete.uid}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-        throw new Error(errorData.message || `Error al eliminar usuario de Auth: ${response.status}`);
-      }
-
-      // 2. Eliminar el documento del usuario de Firestore
       await deleteDoc(doc(db, 'users', userToDelete.uid));
-
+      setUsers(prev => prev.filter(user => user.uid !== userToDelete.uid));
       closeDeleteDialog();
-      fetchUsers();
-      setSnackbarMessage('Usuario eliminado correctamente');
+      
+      // Mensaje personalizado con nombre y apellidos en negrita
+      const fullName = `${userToDelete.name} ${userToDelete.lastname}`.trim();
+      setSnackbarMessage(
+        React.createElement(
+          React.Fragment,
+          null,
+          'El usuario ',
+          React.createElement('strong', null, fullName),
+          ' se eliminó correctamente'
+        )
+      );
       setSnackbarOpen(true);
+      triggerVibration(100);
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      setDeleteError(error.message || 'Error al eliminar el usuario. Verifica la consola.');
+      setDeleteError(error.message || 'Error al eliminar usuario');
     } finally {
       setIsDeletingUser(false);
     }
   };
 
-  const handleSearchIconClick = () => {
-    setShowSearchInput(true);
-  };
-
-  const handleClickAwaySearch = () => {
-    setShowSearchInput(false);
-  };
-
+  // Paginación
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -419,6 +426,28 @@ export const useAdminPanel = () => {
     setPage(0);
   };
 
+  // Búsqueda
+  const handleSearchIconClick = () => {
+    setShowSearchInput(true);
+  };
+
+  const handleClickAwaySearch = () => {
+    if (!searchTerm) {
+      setShowSearchInput(false);
+    }
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setPage(0);
+  };
+
+  const handlePrioritizeResponsablesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPrioritizeResponsables(event.target.checked);
+    setPage(0);
+  };
+
+  // Contacto
   const handleOpenContactDialog = (user: User) => {
     setSelectedUser(user);
     setContactDialogOpen(true);
@@ -429,6 +458,7 @@ export const useAdminPanel = () => {
     setSelectedUser(null);
   };
 
+  // Detalles de usuario
   const handleOpenUserDetailDialog = (user: User) => {
     setDetailUser(user);
     setUserDetailDialogOpen(true);
@@ -439,66 +469,6 @@ export const useAdminPanel = () => {
     setDetailUser(null);
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-  };
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebounceSearchTerm(searchTerm);
-      setPage(0);
-    }, 300); // Tiempo debounce
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm]);
-
-  const getRoleName = (level: number): string => {
-    const roleMap: { [key: number]: string } = {
-      [UserRoles.VOLUNTARIO]: 'Voluntario',
-      [UserRoles.RESPONSABLE]: 'Responsable',
-      [UserRoles.ADMINISTRADOR]: 'Administrador',
-    };
-    return roleMap[level] || 'Desconocido';
-  };
-
-  const filteredUsers = useMemo(() => {
-    let usersToProcess = [...users];
-
-    // Primero, filtrar por el término de búsqueda
-    let searchedUsers = usersToProcess.filter(user =>
-      `${user.name} ${user.lastname} ${user.username} ${user.email || ''} ${(Array.isArray(user.roles) ? user.roles.map(r => getRoleName(r)).join(' ') : getRoleName(user.roles || UserRoles.VOLUNTARIO))}`
-      .toLowerCase()
-      .includes(debounceSearchTerm.toLowerCase())
-    );
-
-    // Luego, ordenar según los criterios:
-    // 1. Priorizar Responsables (si está activo)
-    // 2. Estado de habilitación (habilitados primero)
-    // 3. Nombre completo
-    searchedUsers.sort((a, b) => {
-      // Priorizar Responsables
-      if (prioritizeResponsables) {
-        const aIsResponsable = Array.isArray(a.roles) ? a.roles.includes(UserRoles.RESPONSABLE) : a.roles === UserRoles.RESPONSABLE;
-        const bIsResponsable = Array.isArray(b.roles) ? b.roles.includes(UserRoles.RESPONSABLE) : b.roles === UserRoles.RESPONSABLE;
-        if (aIsResponsable && !bIsResponsable) return -1;
-        if (!aIsResponsable && bIsResponsable) return 1;
-      }
-
-      // Ordenar por isEnabled (true primero)
-      const aIsEnabled = a.isEnabled !== false;
-      const bIsEnabled = b.isEnabled !== false;
-      if (aIsEnabled && !bIsEnabled) return -1;
-      if (!aIsEnabled && bIsEnabled) return 1;
-
-      // Finalmente, ordenar por nombre completo
-      return `${a.name} ${a.lastname}`.localeCompare(`${b.name} ${b.lastname}`);
-    });
-
-    return searchedUsers;
-  }, [users, debounceSearchTerm, prioritizeResponsables]);
-
   return {
     users,
     loading,
@@ -508,14 +478,17 @@ export const useAdminPanel = () => {
     setSnackbarOpen,
     snackbarMessage,
     newUserInfo,
-    setNewUserInfo, 
+    setNewUserInfo,
     formError,
     deleteError,
     isDeleteDialogOpen,
     isEditDialogOpen,
+    isAddingUser,
+    isEditingUser,
+    isDeletingUser,
     setIsEditDialogOpen,
     editUserInfo,
-    setEditUserInfo, 
+    setEditUserInfo,
     handleInputChange,
     handleAddUser,
     openDeleteDialog,
@@ -525,21 +498,13 @@ export const useAdminPanel = () => {
     handleEditUser,
     handleDeleteUser,
     contactDialogOpen,
-    setContactDialogOpen,
     selectedUser,
-    setSelectedUser,
     userDetailDialogOpen,
-    setUserDetailDialogOpen,
     detailUser,
-    setDetailUser,
     page,
-    setPage,
     rowsPerPage,
-    setRowsPerPage,
     searchTerm,
-    setSearchTerm,
     showSearchInput,
-    setShowSearchInput,
     handleSearchIconClick,
     handleClickAwaySearch,
     handleChangePage,
@@ -554,9 +519,11 @@ export const useAdminPanel = () => {
     handlePrioritizeResponsablesChange,
     handleEnabledSwitchChange,
     handleEditEnabledSwitchChange,
-    isAddingUser,
-    isDeletingUser,
     addSubmitAttempted,
-    editSubmitAttempted
+    editSubmitAttempted,
+    handleAddRoleChange,
+    handleEditRoleChange,
+    memoizedSetNewUserInfo,
+    memoizedSetEditUserInfo
   };
 };

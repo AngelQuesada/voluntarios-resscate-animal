@@ -1,422 +1,316 @@
-import React, { useRef, useEffect } from "react";
-import { TextField, FormControl, FormLabel, Autocomplete, Box, Chip, Switch, FormControlLabel } from "@mui/material";
-import { UserRoles } from "@/lib/constants";
+import React, { useCallback, forwardRef, useImperativeHandle } from "react";
+import { 
+  TextField, 
+  Box, 
+  Switch, 
+  FormControlLabel, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem, 
+  Chip,
+  OutlinedInput,
+  SelectChangeEvent,
+  Checkbox,
+  ListItemText,
+  Typography,
+  useTheme
+} from "@mui/material";
+import { UserRoles, getRoleName } from "@/lib/constants";
+import { UserInfoForForm } from "@/types/common";
 
-// Función para validar formato de número de teléfono español
-const isValidPhone = (phone: string): boolean => {
-  if (!phone) return true; // Campo vacío se maneja en otra validación
-  // Regex para validar números españoles
-  const phoneRegex = /^(\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$/;
-  return phoneRegex.test(phone);
-};
-
-// Definir las opciones de roles para el Autocomplete, incluyendo el color
-export const roleOptions = [
-  { id: UserRoles.RESPONSABLE, label: "Responsable", color: 'success.main' },
-  { id: UserRoles.ADMINISTRADOR, label: "Administrador", color: 'error.main' },
-];
-
-interface UserFormProps {
-  userData: any;
-  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setUserData: (value: React.SetStateAction<any>) => void;
-  isAddMode?: boolean;
-  handleEnabledSwitchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  submitAttempted?: boolean;
+// Tipo extendido para el formulario con propiedades adicionales
+interface ExtendedUserFormData extends UserInfoForForm {
+  passwordConfirm?: string;
+  isEnabled?: boolean;
 }
 
-const UserForm: React.FC<UserFormProps> = ({ 
+interface UserFormProps {
+  userData: ExtendedUserFormData;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setUserData: React.Dispatch<React.SetStateAction<ExtendedUserFormData>>;
+  isAddMode: boolean;
+  handleEnabledSwitchChange: (checked: boolean) => void;
+  onRoleChange: (roles: number[]) => void;
+  submitAttempted: boolean;
+}
+
+// Interfaz para los métodos expuestos por el formulario
+export interface UserFormRef {
+  getCurrentData: () => ExtendedUserFormData;
+  resetForm: () => void;
+}
+
+// Función helper para asegurar que Voluntario siempre esté incluido
+const ensureVoluntarioRole = (roles: number[] | undefined): number[] => {
+  if (!roles) return [UserRoles.VOLUNTARIO];
+  return roles.includes(UserRoles.VOLUNTARIO) ? roles : [UserRoles.VOLUNTARIO, ...roles];
+};
+
+// Función para obtener el color de cada rol
+const getRoleColor = (roleNumber: number, theme: any) => {
+  switch (roleNumber) {
+    case UserRoles.ADMINISTRADOR:
+      return {
+        color: theme.palette.error.main,
+        backgroundColor: theme.palette.error.light + '20',
+        borderColor: theme.palette.error.main,
+        chipColor: 'error' as const
+      };
+    case UserRoles.RESPONSABLE:
+      return {
+        color: theme.palette.success.main,
+        backgroundColor: theme.palette.success.light + '20',
+        borderColor: theme.palette.success.main,
+        chipColor: 'success' as const
+      };
+    case UserRoles.VOLUNTARIO:
+    default:
+      return {
+        color: theme.palette.primary.main,
+        backgroundColor: theme.palette.primary.light + '20',
+        borderColor: theme.palette.primary.main,
+        chipColor: 'primary' as const
+      };
+  }
+};
+
+// Componente para gestión de usuarios
+const UserForm = forwardRef<UserFormRef, UserFormProps>(({ 
   userData, 
-  handleChange, 
-  setUserData, 
+  handleChange,
   isAddMode = false,
   handleEnabledSwitchChange,
+  onRoleChange,
   submitAttempted = false
-}) => {
-  // Validación del teléfono
-  const phoneError = userData.phone && !isValidPhone(userData.phone) && submitAttempted;
+}, ref) => {
+  const theme = useTheme();
+
+  const currentRoles = ensureVoluntarioRole(userData.roles);
   
-  // Validación de contraseñas
-  const passwordsDoNotMatch = isAddMode && 
-    submitAttempted && 
-    userData.password !== (userData.passwordConfirm || "");
+  // Exponer métodos para acceso externo
+  useImperativeHandle(ref, () => ({
+    getCurrentData: () => userData,
+    resetForm: () => {}
+  }), [userData]);
+
+  // Handler para el selector de roles
+  const handleRoleChange = useCallback((event: SelectChangeEvent<number[]>) => {
+    const value = event.target.value as number[];
     
-  // Referencias para los campos de texto para mantener el estado del formulario en un componente no controlado
-  const usernameRef = useRef<HTMLInputElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const lastnameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
-  const jobRef = useRef<HTMLInputElement>(null);
-  const locationRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-  const passwordConfirmRef = useRef<HTMLInputElement>(null);
-  const birthdateRef = useRef<HTMLInputElement>(null);
-  
-  // Manejar los cambios en el formulario al perder el foco (onBlur) en lugar de en cada tecla
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    handleChange(e as any);
-  };
+    const rolesWithVoluntario = ensureVoluntarioRole(value);
+    
+    onRoleChange(rolesWithVoluntario);
+  }, [onRoleChange]);
 
-  // Configurar el orden de los elementos del formulario
-  const inputFieldsOrder = isAddMode ? 
-    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, passwordRef, passwordConfirmRef, phoneRef, jobRef, locationRef] :
-    [usernameRef, nameRef, lastnameRef, birthdateRef, emailRef, phoneRef, jobRef, locationRef];
+  const availableRoles = Object.values(UserRoles)
+    .filter((role): role is typeof UserRoles[keyof typeof UserRoles] => typeof role === 'number' && role !== UserRoles.VOLUNTARIO);
 
-  // Esta función conecta los campos para la navegación
-  useEffect(() => {
-    // Agregar oyentes para manejar la navegación del teclado
-    const fields = inputFieldsOrder.filter(ref => ref.current);
-
-    fields.forEach((fieldRef, index) => {
-      if (!fieldRef.current) return;
-      
-      // Eliminar primero los event listeners anteriores para evitar duplicados
-      const element = fieldRef.current;
-      
-      element.addEventListener('keydown', (e: KeyboardEvent) => {
-        // Solo manejar la tecla Enter, Tab o ir a siguiente desde el teclado móvil
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const nextField = fields[index + 1];
-          if (nextField && nextField.current) {
-            nextField.current.focus();
-          }
-        }
-      });
-    });
-
-    fields.forEach((fieldRef, index) => {
-      if (!fieldRef.current) return;
-      
-      if (index < fields.length - 1) {
-        fieldRef.current.setAttribute('enterkeyhint', 'next');
-      } else {
-        fieldRef.current.setAttribute('enterkeyhint', 'done');
-      }
-    });
-
-    // Limpiar event listeners al desmontar
-    return () => {
-      fields.forEach(fieldRef => {
-        if (fieldRef.current) {
-          const clone = fieldRef.current.cloneNode(true);
-          if (fieldRef.current.parentNode) {
-            fieldRef.current.parentNode.replaceChild(clone, fieldRef.current);
-          }
-        }
-      });
-    };
-  }, [isAddMode]);
+  const selectedRoles = currentRoles.filter(role => role !== UserRoles.VOLUNTARIO);
 
   return (
-    <>
+    <Box
+      component="form"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        width: '100%',
+      }}
+    >
+      {/* Campo de usuario */}
       <TextField
-        autoFocus={isAddMode}
-        margin="dense"
         name="username"
-        label="Nombre de Usuario"
-        type="text"
+        label="Usuario"
+        value={userData.username || ''}
+        onChange={handleChange}
         fullWidth
-        variant="outlined"
-        defaultValue={userData.username}
-        inputRef={usernameRef}
-        onBlur={handleBlur}
         required
+        disabled={!isAddMode}
         error={submitAttempted && !userData.username}
-        helperText={submitAttempted && !userData.username ? "El nombre de usuario es obligatorio" : ""}
-        inputProps={{
-          autoCapitalize: "none",
-          autoComplete: "off",
-          autoCorrect: "off"
-        }}
-        InputProps={{
-          inputMode: "text",
-        }}
+        helperText={submitAttempted && !userData.username ? 'Campo requerido' : ''}
+        sx={{ marginTop: 2 }}
       />
-      
-      {/* Switch para habilitar/deshabilitar usuario */}
+
+      {/* Campos de nombre */}
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        <TextField
+          name="name"
+          label="Nombre"
+          value={userData.name || ''}
+          onChange={handleChange}
+          fullWidth
+          required
+          error={submitAttempted && !userData.name}
+          helperText={submitAttempted && !userData.name ? 'Campo requerido' : ''}
+        />
+        <TextField
+          name="lastname"
+          label="Apellidos"
+          value={userData.lastname || ''}
+          onChange={handleChange}
+          fullWidth
+          required
+          error={submitAttempted && !userData.lastname}
+          helperText={submitAttempted && !userData.lastname ? 'Campo requerido' : ''}
+        />
+      </Box>
+
+      {/* Selector de roles */}
+      <FormControl fullWidth>
+        <InputLabel>Roles adicionales</InputLabel>
+        <Select
+          multiple
+          value={selectedRoles}
+          onChange={handleRoleChange}
+          input={<OutlinedInput label="Roles adicionales" />}
+          renderValue={(selected) => (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {/* Mostrar solo los roles adicionales seleccionados */}
+              {(selected as number[]).map((value) => {
+                const roleColor = getRoleColor(value, theme);
+                return (
+                  <Chip
+                    key={value}
+                    label={getRoleName(value)}
+                    size="small"
+                    color={roleColor.chipColor}
+                  />
+                );
+              })}
+            </Box>
+          )}
+        >
+          {availableRoles.map((role) => {
+            const roleColor = getRoleColor(role, theme);
+            return (
+              <MenuItem 
+                key={role} 
+                value={role}
+                sx={{
+                  color: roleColor.color,
+                  backgroundColor: selectedRoles.includes(role) ? roleColor.backgroundColor : 'transparent',
+                  border: selectedRoles.includes(role) ? `1px solid ${roleColor.borderColor}` : 'none',
+                  '&:hover': {
+                    backgroundColor: roleColor.backgroundColor,
+                  }
+                }}
+              >
+                <Checkbox 
+                  checked={selectedRoles.includes(role)} 
+                  sx={{ color: roleColor.color }}
+                />
+                <ListItemText primary={getRoleName(role)} />
+              </MenuItem>
+            );
+          })}
+        </Select>
+      </FormControl>
+
+      {/* Información de rol base */}
+      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+        * Todos los usuarios tienen el rol de Voluntario por defecto
+      </Typography>
+
+      {/* Campos de contacto */}
+      <TextField
+        name="email"
+        label="Email"
+        type="email"
+        value={userData.email || ''}
+        onChange={handleChange}
+        fullWidth
+        required
+        error={submitAttempted && !userData.email}
+        helperText={submitAttempted && !userData.email ? 'Campo requerido' : ''}
+      />
+
+      <TextField
+        name="phone"
+        label="Teléfono"
+        value={userData.phone || ''}
+        onChange={handleChange}
+        fullWidth
+        required
+        error={submitAttempted && !userData.phone}
+        helperText={submitAttempted && !userData.phone ? 'Campo requerido' : ''}
+      />
+
+      {/* Campos opcionales */}
+      <TextField
+        name="birthdate"
+        label="Fecha de nacimiento"
+        type="date"
+        value={userData.birthdate || ''}
+        onChange={handleChange}
+        fullWidth
+        InputLabelProps={{ shrink: true }}
+      />
+
+      <TextField
+        name="job"
+        label="Profesión"
+        value={userData.job || ''}
+        onChange={handleChange}
+        fullWidth
+      />
+
+      <TextField
+        name="location"
+        label="Ubicación"
+        value={userData.location || ''}
+        onChange={handleChange}
+        fullWidth
+      />
+
+      {/* Campos de contraseña para modo agregar */}
+      {isAddMode && (
+        <>
+          <TextField
+            name="password"
+            label="Contraseña"
+            type="password"
+            value={userData.password || ''}
+            onChange={handleChange}
+            fullWidth
+            required
+            error={submitAttempted && !userData.password}
+            helperText={submitAttempted && !userData.password ? 'Campo requerido' : ''}
+          />
+          <TextField
+            name="passwordConfirm"
+            label="Confirmar contraseña"
+            type="password"
+            value={userData.passwordConfirm || ''}
+            onChange={handleChange}
+            fullWidth
+            required
+            error={submitAttempted && (!userData.passwordConfirm || userData.password !== userData.passwordConfirm)}
+            helperText={
+              submitAttempted && !userData.passwordConfirm 
+                ? 'Campo requerido' 
+                : submitAttempted && userData.password !== userData.passwordConfirm 
+                ? 'Las contraseñas no coinciden' 
+                : ''
+            }
+          />
+        </>
+      )}
+
+      {/* Switch de estado activo */}
       <FormControlLabel
         control={
           <Switch
             checked={userData.isEnabled !== false}
-            onChange={handleEnabledSwitchChange}
-            name="isEnabled"
-            color="primary"
+            onChange={(e) => handleEnabledSwitchChange(e.target.checked)}
           />
         }
-        label={userData.isEnabled !== false ? "Usuario Habilitado" : "Usuario Deshabilitado"}
-        sx={{ my: 1, display: 'block' }}
+        label="Usuario activo"
       />
-      
-      <TextField
-        margin="dense"
-        name="name"
-        label="Nombre"
-        type="text"
-        fullWidth
-        variant="outlined"
-        defaultValue={userData.name}
-        inputRef={nameRef}
-        onBlur={handleBlur}
-        required
-        error={submitAttempted && !userData.name}
-        helperText={submitAttempted && !userData.name ? "El nombre es obligatorio" : ""}
-        inputProps={{
-          autoComplete: "off",
-          autoCorrect: "off"
-        }}
-        InputProps={{
-          inputMode: "text",
-        }}
-      />
-      <TextField
-        margin="dense"
-        name="lastname"
-        label="Apellidos"
-        type="text"
-        fullWidth
-        variant="outlined"
-        defaultValue={userData.lastname}
-        inputRef={lastnameRef}
-        onBlur={handleBlur}
-        required
-        error={submitAttempted && !userData.lastname}
-        helperText={submitAttempted && !userData.lastname ? "Los apellidos son obligatorios" : ""}
-        inputProps={{
-          autoComplete: "off",
-          autoCorrect: "off"
-        }}
-        InputProps={{
-          inputMode: "text",
-        }}
-      />
-      <TextField
-        margin="dense"
-        name="birthdate"
-        label="Fecha de Nacimiento"
-        type="date"
-        fullWidth
-        variant="outlined"
-        defaultValue={userData.birthdate}
-        inputRef={birthdateRef}
-        onBlur={handleBlur}
-        InputLabelProps={{
-          shrink: true,
-        }}
-        inputProps={{
-          autoComplete: "off"
-        }}
-      />
-      <TextField
-        margin="dense"
-        name="email"
-        label="Correo Electrónico"
-        type={isAddMode ? "email" : "text"}
-        fullWidth
-        variant="outlined"
-        defaultValue={userData.email}
-        inputRef={emailRef}
-        onBlur={handleBlur}
-        required
-        error={submitAttempted && !userData.email}
-        helperText={submitAttempted && !userData.email ? "El correo electrónico es obligatorio" : ""}
-        inputProps={{
-          autoComplete: "off",
-          autoCorrect: "off"
-        }}
-        InputProps={{
-          inputMode: "email",
-        }}
-      />
-      {isAddMode && (
-        <>
-          <TextField
-            margin="dense"
-            name="password"
-            label="Contraseña"
-            type="password"
-            fullWidth
-            variant="outlined"
-            defaultValue={userData.password}
-            inputRef={passwordRef}
-            onBlur={handleBlur}
-            required
-            error={submitAttempted && (!userData.password || userData.password.length < 6)}
-            helperText={
-              submitAttempted && !userData.password 
-                ? "La contraseña es obligatoria" 
-                : submitAttempted && userData.password && userData.password.length < 6
-                  ? "La contraseña debe tener al menos 6 caracteres"
-                  : "Mínimo 6 caracteres."
-            }
-            inputProps={{
-              autoComplete: "new-password",
-              autoCorrect: "off"
-            }}
-          />
-          <TextField
-            margin="dense"
-            name="passwordConfirm"
-            label="Confirmar Contraseña"
-            type="password"
-            fullWidth
-            variant="outlined"
-            defaultValue={userData.passwordConfirm || ""}
-            inputRef={passwordConfirmRef}
-            onBlur={handleBlur}
-            required
-            error={passwordsDoNotMatch}
-            helperText={
-              passwordsDoNotMatch
-                ? "Las contraseñas no coinciden" 
-                : "Repite la contraseña para confirmar."
-            }
-            inputProps={{
-              autoComplete: "new-password",
-              autoCorrect: "off"
-            }}
-          />
-        </>
-      )}
-      <TextField
-        margin="dense"
-        name="phone"
-        label="Teléfono"
-        type="text"
-        fullWidth
-        variant="outlined"
-        defaultValue={userData.phone}
-        inputRef={phoneRef}
-        onBlur={handleBlur}
-        required
-        error={submitAttempted && (!userData.phone || phoneError)}
-        helperText={
-          submitAttempted && !userData.phone
-            ? "El teléfono es obligatorio"
-            : phoneError
-              ? "Formato de teléfono inválido. Usa formato: 6XXXXXXXX, +34 6XXXXXXXX, etc."
-              : ""
-        }
-        inputProps={{
-          autoComplete: "off",
-          pattern: "^(\\+34|0034)?[ -]*(6|7|8|9)[ -]*([0-9][ -]*){8}$",
-        }}
-        InputProps={{
-          inputMode: "tel",
-        }}
-      />
-      <FormControl fullWidth margin="dense" variant="outlined">
-        <FormLabel component="legend">Roles Adicionales</FormLabel>
-        <Autocomplete
-          multiple
-          id={isAddMode ? "add-user-roles" : "edit-user-roles"}
-          options={roleOptions}
-          getOptionLabel={(option) => option.label}
-          value={roleOptions.filter(option => userData.roles?.includes(option.id))}
-          onChange={(_, selectedOptions) => {
-            const selectedRoleIds = selectedOptions.map(option => option.id);
-            const finalRoles = [UserRoles.VOLUNTARIO, ...selectedRoleIds];
-            setUserData((prev: typeof userData) => ({
-              ...prev,
-              roles: [...new Set(finalRoles)]
-            }));
-          }}
-          renderOption={(props, option) => {
-            const {id, key, ...otherProps} = props;
-            return (
-              <Box key={id} component="li" sx={{ '& > div': { mr: 1, flexShrink: 0 } }} {...otherProps}>
-                <Box
-                  component="div"
-                  sx={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    backgroundColor: option.color,
-                    display: 'inline-block',
-                    mr: 1,
-                  }}
-                />
-                {option.label}
-              </Box>
-            )
-          }}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const {key, ...otherProps} = getTagProps({ index });
-              return (
-                <Chip
-                  key={option.id}
-                  label={option.label}
-                  size="small"
-                  sx={{
-                    backgroundColor: option.color,
-                    color: 'white',
-                    margin: '2px',
-                    '& .MuiChip-deleteIcon': {
-                      color: 'rgba(255,255,255,0.7)',
-                      '&:hover': {
-                        color: 'white',
-                      },
-                    },
-                  }}
-                  {...otherProps}
-                />
-              )
-            })
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              variant="outlined"
-              placeholder="Seleccionar roles"
-              InputProps={{
-                ...params.InputProps
-              }}
-            />
-          )}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-        />
-      </FormControl>
-      <TextField
-        margin="dense"
-        name="job"
-        label="Profesión (Opcional)"
-        type="text"
-        fullWidth
-        variant="outlined"
-        defaultValue={userData.job}
-        inputRef={jobRef}
-        onBlur={handleBlur}
-        inputProps={{
-          autoComplete: "off",
-          autoCorrect: "off"
-        }}
-        InputProps={{
-          inputMode: "text",
-        }}
-      />
-      <TextField
-        margin="dense"
-        name="location"
-        label="Localidad (Opcional)"
-        type="text"
-        fullWidth
-        variant="outlined"
-        defaultValue={userData.location}
-        inputRef={locationRef}
-        onBlur={handleBlur}
-        inputProps={{
-          autoComplete: "off",
-          autoCorrect: "off"
-        }}
-        InputProps={{
-          inputMode: "text",
-        }}
-      />
-    </>
+    </Box>
   );
-};
+});
+
+UserForm.displayName = 'UserForm';
 
 export default UserForm;

@@ -19,19 +19,15 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  Switch,
-  FormControlLabel,
-  Backdrop
 } from "@mui/material";
 import { Header } from "@/components/schedule/header";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import ContactPhoneIcon from "@mui/icons-material/ContactPhone";
-import HistoryIcon from "@mui/icons-material/History";
 import PeopleIcon from "@mui/icons-material/People";
-import DateRangeIcon from '@mui/icons-material/DateRange';
-import { triggerVibration } from '@/lib/vibration'; // Added import
+import CalendarViewWeekIcon from "@mui/icons-material/CalendarViewWeek";
+import HistoryIcon from "@mui/icons-material/History";
 import { useAdminPanel } from "@/hooks/use-admin-panel";
 import NotificationSnackbar from "../schedule/NotificationSnackbar";
 import { UserRoles, getRoleName } from "@/lib/constants";
@@ -43,7 +39,6 @@ import SearchInput from "./SearchInput";
 import WeekViewPanel from "./WeekViewPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Importar el componente de historial lazy
 const HistoryCalendar = lazy(() => import('../history/HistoryCalendar'));
 
 interface TabPanelProps {
@@ -75,12 +70,6 @@ function TabPanel(props: TabPanelProps) {
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState(0);
   const isMobile = useIsMobile();
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    triggerVibration(30); // Added vibration
-    setActiveTab(newValue);
-  };
-
   const {
     loading,
     isAddDialogOpen,
@@ -94,8 +83,6 @@ export function AdminPanel() {
     deleteError,
     isDeleteDialogOpen,
     isEditDialogOpen,
-    isAddingUser,
-    isDeletingUser,
     setIsEditDialogOpen,
     editUserInfo,
     setEditUserInfo,
@@ -125,65 +112,61 @@ export function AdminPanel() {
     handleCloseUserDetailDialog,
     handleSearchChange,
     filteredUsers,
-    prioritizeResponsables,
-    handlePrioritizeResponsablesChange,
-    handleEnabledSwitchChange,
     handleEditEnabledSwitchChange,
     addSubmitAttempted,
     editSubmitAttempted,
+    handleAddRoleChange,
+    handleEditRoleChange,
+    isAddingUser,
+    isEditingUser
   } = useAdminPanel();
 
+  const sortedFilteredUsers = React.useMemo(() => {
+    return filteredUsers.sort((a, b) => {
+      if (a.isEnabled !== false && b.isEnabled === false) return -1;
+      if (a.isEnabled === false && b.isEnabled !== false) return 1;
+      return `${a.name} ${a.lastname}`.localeCompare(`${b.name} ${b.lastname}`);
+    });
+  }, [filteredUsers]);
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
 
   const UsersTable = () => (
     <>
-      {/* Fila para el botón Añadir Usuario */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            triggerVibration(45);
-            setIsAddDialogOpen(true);
-          }}
-        >
-          Añadir Voluntario
-        </Button>
-      </Box>
-
-      {/* Fila para la búsqueda y el interruptor de priorizar responsables */}
       <Box
         sx={{
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          justifyContent: "space-between",
-          alignItems: isMobile ? "flex-start" : "center",
-          flexWrap: isMobile ? "nowrap" : "wrap",
-          gap: 1,
-          mb: 2
+          flexDirection: "column",
+          mb: 2,
         }}
       >
-        {isMobile && (
-          <FormControlLabel
-            control={<Switch checked={prioritizeResponsables} onChange={handlePrioritizeResponsablesChange} />}
-            label="Solo Responsables"
-            sx={{ mb: 1 }}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
+          <SearchInput 
+            searchTerm={searchTerm}
+            showSearchInput={showSearchInput}
+            handleSearchChange={handleSearchChange}
+            handleSearchIconClick={handleSearchIconClick}
+            handleClickAwaySearch={handleClickAwaySearch}
           />
-        )}
-        <SearchInput 
-          searchTerm={searchTerm}
-          showSearchInput={isMobile ? true : showSearchInput}
-          handleSearchChange={handleSearchChange}
-          handleSearchIconClick={handleSearchIconClick}
-          handleClickAwaySearch={isMobile ? undefined : handleClickAwaySearch}
-          isMobile={isMobile}
-        />
-        {!isMobile && (
-          <FormControlLabel
-            control={<Switch checked={prioritizeResponsables} onChange={handlePrioritizeResponsablesChange} />}
-            label="Solo Responsables"
-            sx={{ ml: 1 }}
-          />
-        )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setIsAddDialogOpen(true)}
+            sx={{ flexShrink: 0 }}
+          >
+            Añadir Usuario
+          </Button>
+        </Box>
       </Box>
 
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
@@ -241,7 +224,7 @@ export function AdminPanel() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers
+                sortedFilteredUsers
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((user) => (
                     <TableRow
@@ -301,31 +284,55 @@ export function AdminPanel() {
                         </Box>
                       </TableCell>
                       <TableCell align="center">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleOpenContactDialog(user)}
-                          title={`Contactar a ${user.name}`}
-                        >
-                          <ContactPhoneIcon />
-                        </IconButton>
+                        <Tooltip title="Contactar" arrow>
+                          <IconButton 
+                            onClick={() => handleOpenContactDialog(user)}
+                            size="small"
+                            sx={{
+                              color: 'primary.main',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                color: 'primary.dark'
+                              }
+                            }}
+                          >
+                            <ContactPhoneIcon />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                       <TableCell align="center">
-                        <IconButton
-                          aria-label="edit user"
-                          color="primary"
-                          onClick={() => openEditDialog(user)}
-                          sx={{ p: 0, mr: 0.5 }}
-                        >
-                          <EditIcon fontSize="medium" />
-                        </IconButton>
-                        <IconButton
-                          aria-label="delete user"
-                          color="error"
-                          onClick={() => openDeleteDialog(user)}
-                          sx={{ p: 0 }}
-                        >
-                          <DeleteIcon fontSize="medium" />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                          <Tooltip title="Editar" arrow>
+                            <IconButton 
+                              onClick={() => openEditDialog(user)}
+                              size="small"
+                              sx={{
+                                color: 'primary.main',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                  color: 'primary.dark'
+                                }
+                              }}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar" arrow>
+                            <IconButton 
+                              onClick={() => openDeleteDialog(user)}
+                              size="small"
+                              sx={{
+                                color: 'error.main',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                                  color: 'error.dark'
+                                }
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))
@@ -334,14 +341,17 @@ export function AdminPanel() {
           </Table>
         </TableContainer>
         <TablePagination
-          rowsPerPageOptions={[12, 24, 48]}
+          rowsPerPageOptions={[12, 25, 50]}
           component="div"
           count={filteredUsers.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Usuarios por página:"
+          labelRowsPerPage="Filas por página:"
+          labelDisplayedRows={({ from, to, count }) => 
+            `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+          }
         />
       </Paper>
     </>
@@ -350,178 +360,125 @@ export function AdminPanel() {
   return (
     <>
       <Header />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            mb: 2,
-          }}
-        >
-          <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
-            Panel de Administración
-          </Typography>
-          
-          {/* Sistema de pestañas */}
-          <Tabs 
-            value={activeTab} 
-            onChange={handleTabChange} 
-            aria-label="panel de administración tabs"
-            sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+      
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ width: '100%', bgcolor: 'background.paper' }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant={isMobile ? "scrollable" : "fullWidth"}
+            scrollButtons="auto"
+            aria-label="admin panel tabs"
           >
-            <Tab 
-              icon={<DateRangeIcon />} 
-              label="Semana" 
-              iconPosition="start"
-              id="tab-0"
-              aria-controls="tabpanel-0"
-            />
-            <Tab 
-              icon={<PeopleIcon />} 
-              label="Usuarios" 
-              iconPosition="start"
-              id="tab-1"
-              aria-controls="tabpanel-1"
-            />
-            <Tab 
-              icon={<HistoryIcon />} 
-              label="Historial" 
-              iconPosition="start"
-              id="tab-2"
-              aria-controls="tabpanel-2"
-            />
+            <Tab label="Gestión de Usuarios" icon={<PeopleIcon />} />
+            <Tab label="Vista Semanal" icon={<CalendarViewWeekIcon />} />
+            <Tab label="Historial" icon={<HistoryIcon />} />
           </Tabs>
 
-          {/* Contenido de las pestañas */}
           <TabPanel value={activeTab} index={0}>
-            <Suspense fallback={
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress />
-              </Box>
-            }>
-              {activeTab === 0 && <WeekViewPanel onUserClick={handleOpenUserDetailDialog} />}
-            </Suspense>
+            <UsersTable />
           </TabPanel>
 
           <TabPanel value={activeTab} index={1}>
-            <UsersTable />
+            <WeekViewPanel onUserClick={() => {}} />
           </TabPanel>
-          
+
           <TabPanel value={activeTab} index={2}>
-            <Suspense fallback={
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress />
-              </Box>
-            }>
-              {activeTab === 2 && <HistoryCalendar />}
+            <Suspense fallback={<CircularProgress />}>
+              <HistoryCalendar />
             </Suspense>
           </TabPanel>
         </Box>
+      </Container>
 
-        {/* Diálogos y notificaciones */}
-        {contactDialogOpen && selectedUser && (
-          <ContactDialog
-            open={contactDialogOpen}
-            onClose={handleCloseContactDialog}
-            user={selectedUser}
-          />
-        )}
+      <NotificationSnackbar
+        open={snackbarOpen}
+        message={snackbarMessage}
+        onClose={() => setSnackbarOpen(false)}
+      />
 
-        <DialogComponent
-          open={isAddDialogOpen}
-          onClose={() => setIsAddDialogOpen(false)}
-          title="Añadir Nuevo Usuario"
-          content={
-            <UserForm
-              userData={newUserInfo}
-              handleChange={handleInputChange}
-              setUserData={setNewUserInfo}
-              isAddMode={true}
-              handleEnabledSwitchChange={handleEnabledSwitchChange}
-              submitAttempted={addSubmitAttempted}
-            />
-          }
-          error={formError}
-          actions={[
-            { label: "Cancelar", onClick: () => setIsAddDialogOpen(false) },
-            {
-              label: "Añadir",
-              onClick: handleAddUser,
-              variant: "contained",
-              color: "primary"
-            }
-          ]}
+      {contactDialogOpen && selectedUser && (
+        <ContactDialog
+          user={selectedUser}
+          open={contactDialogOpen}
+          onClose={handleCloseContactDialog}
         />
+      )}
 
-        <DialogComponent
-          open={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
-          title="Editar Usuario"
-          content={
-            <UserForm
-              userData={editUserInfo}
-              handleChange={handleEditInputChange}
-              setUserData={setEditUserInfo}
-              isAddMode={false}
-              handleEnabledSwitchChange={handleEditEnabledSwitchChange}
-              submitAttempted={editSubmitAttempted}
-            />
-          }
-          error={formError}
-          actions={[
-            { 
-              label: "Cancelar", 
-              onClick: () => setIsEditDialogOpen(false),
-              disabled: isAddingUser
-            },
-            {
-              label: "Guardar Cambios",
-              onClick: handleEditUser,
-              variant: "contained",
-              color: "primary",
-              disabled: isAddingUser
-            }
-          ]}
-        />
-
-        <DialogComponent
-          open={isDeleteDialogOpen}
-          onClose={closeDeleteDialog}
-          title="¿Eliminar usuario?"
-          contentText="Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar este usuario?"
-          error={deleteError}
-          actions={[
-            { label: "Cancelar", onClick: closeDeleteDialog },
-            {
-              label: "Eliminar",
-              onClick: handleDeleteUser,
-              color: "error",
-              autoFocus: true
-            }
-          ]}
-        />
-
-        <NotificationSnackbar
-          open={snackbarOpen}
-          message={snackbarMessage}
-          severity="info"
-          onClose={() => setSnackbarOpen(false)}
-        />
-
+      {userDetailDialogOpen && detailUser && (
         <UserDetailDialog
+          user={detailUser}
           open={userDetailDialogOpen}
           onClose={handleCloseUserDetailDialog}
-          user={detailUser}
         />
+      )}
 
-        <Backdrop
-          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
-          open={isAddingUser || isDeletingUser}
-        >
-          <CircularProgress color="inherit" />
-        </Backdrop>
+      <DialogComponent
+        open={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+        title="Añadir nuevo usuario"
+        content={
+          <UserForm
+            userData={newUserInfo}
+            handleChange={handleInputChange}
+            setUserData={setNewUserInfo}
+            isAddMode={true}
+            onRoleChange={handleAddRoleChange}
+            submitAttempted={addSubmitAttempted}
+            handleEnabledSwitchChange={() => {}}
+          />
+        }
+        error={formError}
+        actions={[
+          { label: "Cancelar", onClick: () => setIsAddDialogOpen(false) },
+          { 
+            label: "Añadir", 
+            onClick: handleAddUser, 
+            variant: "contained",
+            loading: isAddingUser
+          }
+        ]}
+      />
 
-      </Container>
+      <DialogComponent
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        title="Editar Usuario"
+        maxWidth="sm"
+        error={formError}
+        content={
+          <UserForm
+            userData={editUserInfo}
+            handleChange={handleEditInputChange}
+            setUserData={setEditUserInfo}
+            isAddMode={false}
+            handleEnabledSwitchChange={handleEditEnabledSwitchChange}
+            onRoleChange={handleEditRoleChange}
+            submitAttempted={editSubmitAttempted}
+          />
+        }
+        actions={[
+          { label: "Cancelar", onClick: () => setIsEditDialogOpen(false) },
+          { label: "Guardar", onClick: handleEditUser, variant: "contained", loading: isEditingUser }
+        ]}
+      />
+
+      <DialogComponent
+        open={isDeleteDialogOpen}
+        onClose={closeDeleteDialog}
+        title="¿Eliminar usuario?"
+        contentText="Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar este usuario?"
+        error={deleteError}
+        actions={[
+          { label: "Cancelar", onClick: closeDeleteDialog },
+          {
+            label: "Eliminar",
+            onClick: handleDeleteUser,
+            color: "error",
+            variant: "contained"
+          }
+        ]}
+      />
     </>
   );
 }

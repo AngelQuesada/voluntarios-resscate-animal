@@ -1,8 +1,9 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import * as React from 'react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render as customRender } from '../../../../__tests__/test-utils';
 import AddUserToShiftDialog from '../../schedule/AddUserToShiftDialog';
-import { UserRoles } from '@/lib/constants';
+import { UserRoles } from '../../../lib/constants';
 
 const mockUsers = [
   {
@@ -179,8 +180,8 @@ describe('AddUserToShiftDialog', () => {
           uid: 'user-no-name',
           email: 'noname@example.com',
           username: 'noname',
-          name: '',  // Add empty name
-          lastname: '',  // Add empty lastname
+          name: '',
+          lastname: '',
           roles: [UserRoles.VOLUNTARIO],
           birthdate: '1990-01-01',
           phone: '123456789',
@@ -193,7 +194,7 @@ describe('AddUserToShiftDialog', () => {
     
     customRender(<AddUserToShiftDialog {...propsWithUnnamedUser} />);
     
-    // El usuario sin nombre no aparece porque está deshabilitado por el filtro de usuarios válidos
-    expect(screen.getByText(/no hay usuarios disponibles/i)).toBeInTheDocument();
+    // El usuario sin nombre debería aparecer como "Usuario sin nombre"
+    expect(screen.getByText('Usuario sin nombre')).toBeInTheDocument();
   });
 });

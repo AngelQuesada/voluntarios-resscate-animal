@@ -1,4 +1,4 @@
-import React, { useCallback, forwardRef, useImperativeHandle } from "react";
+import React, { useCallback, forwardRef, useImperativeHandle, useState, useMemo } from "react";
 import { 
   TextField, 
   Box, 
@@ -14,10 +14,13 @@ import {
   Checkbox,
   ListItemText,
   Typography,
-  useTheme
+  useTheme,
+  Autocomplete,
+  Divider
 } from "@mui/material";
 import { UserRoles, getRoleName } from "@/lib/constants";
 import { UserInfoForForm } from "@/types/common";
+import { GRANADA_LOCATIONS } from "@/lib/granada-locations";
 
 // Tipo extendido para el formulario con propiedades adicionales
 interface ExtendedUserFormData extends UserInfoForForm {
@@ -79,12 +82,14 @@ const getRoleColor = (roleNumber: number, theme: any) => {
 const UserForm = forwardRef<UserFormRef, UserFormProps>(({ 
   userData, 
   handleChange,
+  setUserData,
   isAddMode = false,
   handleEnabledSwitchChange,
   onRoleChange,
   submitAttempted = false
 }, ref) => {
   const theme = useTheme();
+  const [locationInputValue, setLocationInputValue] = useState('');
 
   const currentRoles = ensureVoluntarioRole(userData.roles);
   
@@ -102,6 +107,26 @@ const UserForm = forwardRef<UserFormRef, UserFormProps>(({
     
     onRoleChange(rolesWithVoluntario);
   }, [onRoleChange]);
+
+  const handleLocationChange = useCallback((event: any, newValue: string | null) => {
+    // No permitir seleccionar el separador
+    if (newValue === "---") {
+      return;
+    }
+    
+    setUserData(prev => ({
+      ...prev,
+      location: newValue || ''
+    }));
+  }, [setUserData]);
+
+  const locationOptions = useMemo(() => {
+    return GRANADA_LOCATIONS.filter(location => {
+      if (location === "---") return true;
+      if (!locationInputValue) return true;
+      return location.toLowerCase().includes(locationInputValue.toLowerCase());
+    });
+  }, [locationInputValue]);
 
   const availableRoles = Object.values(UserRoles)
     .filter((role): role is typeof UserRoles[keyof typeof UserRoles] => typeof role === 'number' && role !== UserRoles.VOLUNTARIO);
@@ -255,12 +280,57 @@ const UserForm = forwardRef<UserFormRef, UserFormProps>(({
         fullWidth
       />
 
-      <TextField
-        name="location"
-        label="Ubicación"
-        value={userData.location || ''}
-        onChange={handleChange}
-        fullWidth
+      {/* Campo de localidad con Autocomplete filtrable */}
+      <Autocomplete
+        value={userData.location || null}
+        onChange={handleLocationChange}
+        inputValue={locationInputValue}
+        onInputChange={(event, newInputValue) => {
+          setLocationInputValue(newInputValue);
+        }}
+        options={locationOptions}
+        getOptionDisabled={(option) => option === "---"}
+        renderOption={(props, option) => {
+          if (option === "---") {
+            return (
+              <Divider key="separator" sx={{ my: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Localidades de Granada
+                </Typography>
+              </Divider>
+            );
+          }
+          
+          return (
+            <MenuItem
+              {...props}
+              key={option}
+              sx={{
+                '&:hover': {
+                  backgroundColor: theme.palette.action.hover,
+                },
+              }}
+            >
+              {option}
+            </MenuItem>
+          );
+        }}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Localidad"
+            placeholder="Escriba para buscar..."
+            fullWidth
+          />
+        )}
+        freeSolo={false}
+        clearOnBlur
+        handleHomeEndKeys
+        sx={{
+          '& .MuiAutocomplete-listbox': {
+            maxHeight: 300,
+          }
+        }}
       />
 
       {/* Campos de contraseña para modo agregar */}

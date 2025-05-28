@@ -33,7 +33,7 @@ const ScheduleTabsComponent: React.FC<ScheduleTabsProps> = ({
         >
         <Tab 
           icon={<CalendarTodayIcon />} 
-          label="Todos los turnos" 
+          label="Turnos" 
           id="tab-0"
           aria-controls="tabpanel-0"
         />

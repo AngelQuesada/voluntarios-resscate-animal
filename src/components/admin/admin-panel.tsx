@@ -19,6 +19,7 @@ import {
   Tabs,
   Tab,
   CircularProgress,
+  Divider,
 } from "@mui/material";
 import { Header } from "@/components/schedule/header";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -363,17 +364,20 @@ export function AdminPanel() {
       
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ width: '100%', bgcolor: 'background.paper' }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant={isMobile ? "scrollable" : "fullWidth"}
-            scrollButtons="auto"
-            aria-label="admin panel tabs"
-          >
-            <Tab label="Gestión de Usuarios" icon={<PeopleIcon />} />
-            <Tab label="Vista Semanal" icon={<CalendarViewWeekIcon />} />
-            <Tab label="Historial" icon={<HistoryIcon />} />
-          </Tabs>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              variant="fullWidth"
+              indicatorColor="primary"
+              textColor="primary"
+              aria-label="admin panel tabs"
+            >
+              <Tab label="Usuarios" icon={<PeopleIcon />} />
+              <Tab label="Vista Semanal" icon={<CalendarViewWeekIcon />} />
+              <Tab label="Historial" icon={<HistoryIcon />} />
+            </Tabs>
+          </Box>
 
           <TabPanel value={activeTab} index={0}>
             <UsersTable />

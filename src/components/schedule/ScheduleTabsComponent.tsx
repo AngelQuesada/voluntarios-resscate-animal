@@ -2,7 +2,8 @@ import React from 'react';
 import { Tabs, Tab, Box, Badge } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
-import { triggerVibration } from '@/lib/vibration'; // Added import
+import HistoryIcon from '@mui/icons-material/History';
+import { triggerVibration } from '@/lib/vibration';
 
 interface ScheduleTabsProps {
   activeTab: number;
@@ -55,6 +56,12 @@ const ScheduleTabsComponent: React.FC<ScheduleTabsProps> = ({
           label="Mis turnos" 
           id="tab-1"
           aria-controls="tabpanel-1"
+        />
+        <Tab
+          icon={<HistoryIcon />}
+          label="Mi historial"
+          id="tab-2"
+          aria-controls="tabpanel-2"
         />
       </Tabs>
     </Box>

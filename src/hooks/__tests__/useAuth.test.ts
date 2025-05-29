@@ -22,9 +22,11 @@ jest.mock('@/lib/firebase', () => ({
 
 // Mock Next.js router
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
 }));
 
@@ -44,6 +46,11 @@ describe('useAuth Hook', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     document.cookie = '';
+    // Reset window.location.protocol for cookie tests
+    Object.defineProperty(window, 'location', {
+      value: { protocol: 'https:' },
+      writable: true,
+    });
   });
 
   test('should initialize with empty values', () => {
@@ -147,7 +154,7 @@ describe('useAuth Hook', () => {
     });
     
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/schedule');
+      expect(mockReplace).toHaveBeenCalledWith('/schedule');
       expect(document.cookie).toContain('auth-token=mock-token');
     });
   });

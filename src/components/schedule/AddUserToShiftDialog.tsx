@@ -48,18 +48,19 @@ const AddUserToShiftDialog: React.FC<AddUserToShiftDialogProps> = ({
              (user.lastname || "").toLowerCase().includes(searchTerm.toLowerCase());
     })
     .sort((a, b) => {
-      const getHighestRole = (user: User) => {
-        if (!user.roles || user.roles.length === 0) return UserRoles.VOLUNTARIO;
-        return Math.max(...user.roles);
+      // Función para verificar si el usuario es responsable
+      const isResponsable = (user: User) => {
+        return user.roles?.includes(UserRoles.RESPONSABLE) || false;
       };
       
-      const roleA = getHighestRole(a);
-      const roleB = getHighestRole(b);
+      const aIsResponsable = isResponsable(a);
+      const bIsResponsable = isResponsable(b);
       
-      // Ordenar por jerarquía de rol (más alto primero)
-      if (roleA !== roleB) return roleB - roleA;
+      // Priorizar responsables primero
+      if (aIsResponsable && !bIsResponsable) return -1;
+      if (!aIsResponsable && bIsResponsable) return 1;
       
-      // Si los roles son iguales, ordenar alfabéticamente
+      // Si ambos son responsables o ninguno lo es, ordenar alfabéticamente
       return `${a.name} ${a.lastname}`.localeCompare(`${b.name} ${b.lastname}`);
     });
 

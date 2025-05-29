@@ -2,6 +2,66 @@
 
 Este documento proporciona instrucciones para desplegar el Sistema de Gestión de Voluntariado para Rescate Animal en diferentes entornos de producción.
 
+## Solución del error "serviceAccountKey.json does not exist" en Vercel
+
+Si recibes el error `ENOENT: no such file or directory, lstat '/var/task/serviceAccountKey.json'` en Vercel, significa que Firebase Admin está intentando usar un archivo de credenciales que no existe en el entorno de producción. Este proyecto ha sido configurado para usar variables de entorno en su lugar.
+
+### Variables de entorno requeridas para Firebase Admin
+
+Configura las siguientes variables de entorno en tu panel de Vercel:
+
+```
+# Firebase Client (Frontend) - ya configuradas
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-auth-domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+
+# Firebase Admin SDK (Backend/API Routes) - NUEVAS VARIABLES REQUERIDAS
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY_ID=your-private-key-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour-private-key\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=your-service-account-email
+FIREBASE_CLIENT_ID=your-client-id
+FIREBASE_CLIENT_X509_CERT_URL=your-cert-url
+```
+
+### Cómo obtener las credenciales de Firebase Admin
+
+1. Ve a la [Consola de Firebase](https://console.firebase.google.com/)
+2. Selecciona tu proyecto
+3. Ve a **Configuración del proyecto** > **Cuentas de servicio**
+4. Haz clic en **"Generar nueva clave privada"**
+5. Se descargará un archivo JSON con las credenciales
+6. Abre el archivo JSON y copia los valores correspondientes:
+
+```json
+{
+  "type": "service_account",
+  "project_id": "tu-proyecto-id", // → FIREBASE_PROJECT_ID
+  "private_key_id": "tu-private-key-id", // → FIREBASE_PRIVATE_KEY_ID  
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...", // → FIREBASE_PRIVATE_KEY
+  "client_email": "firebase-adminsdk-xxxxx@tu-proyecto.iam.gserviceaccount.com", // → FIREBASE_CLIENT_EMAIL
+  "client_id": "123456789", // → FIREBASE_CLIENT_ID
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/..." // → FIREBASE_CLIENT_X509_CERT_URL
+}
+```
+
+### Configurar variables en Vercel
+
+1. Ve a tu proyecto en el [dashboard de Vercel](https://vercel.com/dashboard)
+2. Navega a **Settings** > **Environment Variables**
+3. Añade cada variable de entorno una por una
+4. Para `FIREBASE_PRIVATE_KEY`, asegúrate de incluir las comillas y los saltos de línea (\n)
+5. Haz clic en **Save** para cada variable
+6. **Importante**: Después de añadir todas las variables, haz un nuevo deploy para que tomen efecto
+
+### Verificar que el problema está resuelto
+
+Después de configurar las variables de entorno, intenta crear un usuario nuevamente. El error debería desaparecer y la funcionalidad de creación de usuarios debería funcionar correctamente.
+
 ## Preparación para despliegue
 
 Antes de desplegar la aplicación, asegúrate de:

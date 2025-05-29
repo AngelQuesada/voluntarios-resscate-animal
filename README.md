@@ -54,13 +54,48 @@ Este proyecto es una aplicación web diseñada para coordinar y gestionar volunt
 Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variables:
 
 ```
+# Firebase Client (Frontend)
 NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-auth-domain
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-storage-bucket
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
 NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+
+# Firebase Admin SDK (Backend/API Routes)
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY_ID=your-private-key-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour-private-key\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=your-service-account-email
+FIREBASE_CLIENT_ID=your-client-id
+FIREBASE_CLIENT_X509_CERT_URL=your-cert-url
 ```
+
+### Obtener las credenciales de Firebase Admin
+
+1. Ve a la [Consola de Firebase](https://console.firebase.google.com/)
+2. Selecciona tu proyecto
+3. Ve a **Configuración del proyecto** > **Cuentas de servicio**
+4. Haz clic en **"Generar nueva clave privada"**
+5. Se descargará un archivo JSON con las credenciales
+6. Copia los valores del archivo JSON a las variables de entorno correspondientes:
+
+```json
+{
+  "type": "service_account",
+  "project_id": "tu-proyecto-id", // → FIREBASE_PROJECT_ID
+  "private_key_id": "tu-private-key-id", // → FIREBASE_PRIVATE_KEY_ID  
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...", // → FIREBASE_PRIVATE_KEY
+  "client_email": "firebase-adminsdk-xxxxx@tu-proyecto.iam.gserviceaccount.com", // → FIREBASE_CLIENT_EMAIL
+  "client_id": "123456789", // → FIREBASE_CLIENT_ID
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/..." // → FIREBASE_CLIENT_X509_CERT_URL
+}
+```
+
+**Importante**: 
+- Para desarrollo local, configura estas variables en tu archivo `.env.local`
+- Para producción (Vercel), configúralas en el panel de Environment Variables
+- Nunca subas archivos de credenciales al repositorio Git
 
 ## Documentación adicional
 

@@ -2,6 +2,43 @@
 
 Este documento detalla la configuración necesaria de Firebase para el Sistema de Gestión de Voluntariado para Rescate Animal.
 
+## Variables de entorno requeridas
+
+### Firebase Client (Frontend)
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-auth-domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+```
+
+### Firebase Admin SDK (Backend/API Routes)
+```bash
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY_ID=your-private-key-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour-private-key\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=your-service-account-email
+FIREBASE_CLIENT_ID=your-client-id
+FIREBASE_CLIENT_X509_CERT_URL=your-cert-url
+```
+
+### Obtener credenciales de Firebase
+
+1. **Para credenciales del cliente** (Frontend):
+   - Ve a Configuración del proyecto > General
+   - En "Tus aplicaciones", selecciona tu app web
+   - Copia los valores de configuración
+
+2. **Para credenciales de Firebase Admin** (Backend):
+   - Ve a Configuración del proyecto > Cuentas de servicio
+   - Haz clic en "Generar nueva clave privada"
+   - Descarga el archivo JSON
+   - Extrae los valores correspondientes a las variables de entorno
+
+**⚠️ Importante**: Nunca incluyas archivos de credenciales en tu repositorio Git. Usa siempre variables de entorno.
+
 ## Servicios de Firebase requeridos
 
 - **Authentication**: Para gestión de usuarios y autenticación

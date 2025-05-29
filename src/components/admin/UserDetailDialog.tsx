@@ -21,10 +21,14 @@ import {
   Tab,
   Pagination,
   Stack,
+  Button,
+  Alert,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import { formatDate } from '@/lib/utils';
+import PhoneIcon from '@mui/icons-material/Phone';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import { formatDate, calculateAge } from '@/lib/utils';
 import { UserRoles, getRoleName } from '@/lib/constants';
 import { useUserDetailDialog } from '@/hooks/use-user-detail-dialog';
 
@@ -90,6 +94,17 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
     user: userProp,
     shiftsPerPage: 15
   });
+
+  const handleCall = () => {
+    if (!userData?.phone) return;
+    window.location.href = `tel:${userData.phone}`;
+  };
+
+  const handleWhatsApp = () => {
+    if (!userData?.phone) return;
+    const phoneNumber = userData.phone.replace(/[^0-9]/g, "");
+    window.location.href = `https://wa.me/${phoneNumber}`;
+  };
 
   if (userLoading) {
     return (
@@ -214,7 +229,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="text.secondary">
-                Fecha de nacimiento: <strong>{userData.birthdate ? formatDate(userData.birthdate) : 'No disponible'}</strong>
+                Edad: <strong>{userData.birthdate ? calculateAge(userData.birthdate) : 'No disponible'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Profesión: <strong>{userData.job || 'No disponible'}</strong>
@@ -224,6 +239,38 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
               </Typography>
             </Grid>
           </Grid>
+
+          {/* Botones de contacto */}
+          <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              size="small" 
+              startIcon={<PhoneIcon />}
+              onClick={handleCall}
+              sx={{ 
+                width: '120px',
+                minWidth: '120px',
+                height: '36px'
+              }}
+            >
+              Llamar
+            </Button>
+            <Button 
+              variant="contained" 
+              color="success" 
+              size="small" 
+              startIcon={<WhatsAppIcon />}
+              onClick={handleWhatsApp}
+              sx={{ 
+                width: '120px',
+                minWidth: '120px',
+                height: '36px'
+              }}
+            >
+              WhatsApp
+            </Button>
+          </Box>
         </Box>
 
         <Divider sx={{ my: 2 }} />

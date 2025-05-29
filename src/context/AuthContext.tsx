@@ -1,12 +1,19 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import { auth, db } from "@/lib/firebase";
 import { User } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { UserRoles } from "@/lib/constants";
-import { CircularProgress, Box } from "@mui/material";
+import LoadingScreen from "@/components/schedule/LoadingScreen";
 
 type AuthContextType = {
   user:
@@ -17,137 +24,273 @@ type AuthContextType = {
       })
     | null;
   loading: boolean;
+  clearAuthState: () => void;
+  refreshAuthState: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  clearAuthState: () => {},
+  refreshAuthState: async () => {},
 });
-
-// Componente de carga para mostrar mientras se verifica la autenticación
-const LoadingScreen = () => (
-  <Box
-    sx={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh",
-      width: "100vw",
-      position: "fixed",
-      top: 0,
-      left: 0,
-      backgroundColor: "rgba(255, 255, 255, 0.8)",
-      zIndex: 9999,
-    }}
-  >
-    <CircularProgress size={60} />
-  </Box>
-);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthContextType["user"]>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const [isInitialized, setIsInitialized] = useState(false);
+  const router = useRouter();
   const pathname = usePathname();
 
-  // Control de la navegación hacia atrás
+  // Referencias para controlar el estado y evitar condiciones de carrera
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const isUnmountedRef = useRef(false);
+  const lastAuthStateRef = useRef<string | null>(null);
+
+  // Función para limpiar todos los timeouts y listeners
+  const cleanup = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+  }, []);
+
+  // Función para limpiar el estado de autenticación
+  const clearAuthState = useCallback(() => {
+    cleanup();
+    setUser(null);
+    setLoading(false);
+    setIsInitialized(true);
+    lastAuthStateRef.current = null;
+
+    // Limpiar localStorage y sessionStorage relacionado con auth
+    if (typeof window !== "undefined") {
+      try {
+        // Limpiar cookies de auth
+        document.cookie =
+          "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+
+        // Limpiar storage keys relacionados con auth
+        const authKeys = [
+          "firebaseAuthState",
+          "authRedirectPending",
+          "loginTimeout",
+        ];
+        authKeys.forEach((key) => {
+          sessionStorage.removeItem(key);
+          localStorage.removeItem(key);
+        });
+
+        // Limpiar todas las claves de Firebase
+        Object.keys(localStorage).forEach((key) => {
+          if (key.includes("firebase") || key.includes("auth")) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (error) {
+        console.warn("Error limpiando storage:", error);
+      }
+    }
+  }, [cleanup]);
+
+  // Función para refrescar el estado de autenticación
+  const refreshAuthState = useCallback(async () => {
+    if (auth.currentUser) {
+      try {
+        await auth.currentUser.reload();
+        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUser({
+            ...auth.currentUser,
+            name: userData.name,
+            lastname: userData.lastname,
+            roles:
+              userData.roles === undefined
+                ? [UserRoles.VOLUNTARIO]
+                : userData.roles,
+          });
+        }
+      } catch (error) {
+        console.error("Error refreshing auth state:", error);
+      }
+    }
+  }, []);
+
+  // Limpiar al desmontar el componente
   useEffect(() => {
-    // Solo aplicar esta lógica cuando ya se ha inicializado completamente
-    // y tenemos un usuario autenticado confirmado
+    return () => {
+      isUnmountedRef.current = true;
+      cleanup();
+    };
+  }, [cleanup]);
+
+  // Control mejorado de navegación hacia atrás
+  useEffect(() => {
     if (user && !loading && isInitialized && typeof window !== "undefined") {
-      const handlePopState = () => {
-        // Verificar si la URL a la que se quiere navegar es la página raíz (login)
-        if (window.location.pathname === "/") {
-          // Redirigir programáticamente a la página de turnos
-          router.push("/schedule");
+      const handlePopState = (event: PopStateEvent) => {
+        if (window.location.pathname === "/" && user) {
+          event.preventDefault();
+          router.replace("/schedule");
         }
       };
 
       window.addEventListener("popstate", handlePopState);
-
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-      };
+      return () => window.removeEventListener("popstate", handlePopState);
     }
   }, [user, loading, isInitialized, router]);
 
   // Verificar permisos para rutas de administración
   useEffect(() => {
     if (!loading && user && isInitialized && pathname?.startsWith("/admin")) {
-      // Verificar si el usuario tiene rol de administrador
       const isAdmin = user.roles?.includes(UserRoles.ADMINISTRADOR);
       if (!isAdmin) {
         console.log(
-          "Usuario sin permisos de administrador intentando acceder a ruta /admin"
+          "Usuario sin permisos de administrador, redirigiendo a /schedule"
         );
-        router.push("/schedule");
+        router.replace("/schedule");
       }
     }
   }, [pathname, user, loading, isInitialized, router]);
 
+  // Listener principal de autenticación con mejor manejo de estados
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+    // Limpiar listener anterior si existe
+    cleanup();
+
+    const handleAuthStateChange = async (firebaseUser: User | null) => {
+      // Evitar procesar si el componente se ha desmontado
+      if (isUnmountedRef.current) return;
+
+      // Crear un identificador único para este estado de auth
+      const authStateId = firebaseUser
+        ? `${firebaseUser.uid}-${Date.now()}`
+        : `null-${Date.now()}`;
+
+      // Evitar procesar el mismo estado múltiples veces
+      if (lastAuthStateRef.current === authStateId) return;
+      lastAuthStateRef.current = authStateId;
+
       try {
         if (firebaseUser) {
+          // Usuario autenticado
           try {
             const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              setUser({
-                ...firebaseUser,
-                name: userData.name,
-                lastname: userData.lastname,
-                roles:
-                  userData.roles === undefined
-                    ? [UserRoles.VOLUNTARIO]
-                    : userData.roles,
-              });
 
-              // Si estamos en la página de login, redirigir a /schedule
-              if (pathname === "/") {
-                router.push("/schedule");
+            if (!isUnmountedRef.current) {
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+
+                // Verificar si el usuario está habilitado
+                if (userData.isEnabled === false) {
+                  console.log("Usuario deshabilitado detectado, limpiando estado");
+                  clearAuthState();
+                  router.replace("/");
+                  return;
+                }
+
+                setUser({
+                  ...firebaseUser,
+                  name: userData.name,
+                  lastname: userData.lastname,
+                  roles:
+                    userData.roles === undefined
+                      ? [UserRoles.VOLUNTARIO]
+                      : userData.roles,
+                });
+              } else {
+                setUser(firebaseUser);
               }
-            } else {
-              setUser(firebaseUser);
+
+              // Redirigir desde login si es necesario
+              if (pathname === "/") {
+                router.replace("/schedule");
+              }
             }
           } catch (error) {
             console.error("Error fetching user data:", error);
-            setUser(firebaseUser);
+            if (!isUnmountedRef.current) {
+              setUser(firebaseUser);
+            }
           }
         } else {
-          setUser(null);
-          // Solo redirigir si ya está inicializada la app y estamos en una ruta protegida
-          if (
-            isInitialized &&
-            pathname !== "/" &&
-            (pathname?.startsWith("/schedule") || pathname?.startsWith("/admin"))
-          ) {
-            router.push("/");
+          // Usuario no autenticado
+          if (!isUnmountedRef.current) {
+            setUser(null);
+
+            // Solo redirigir si estamos en una ruta protegida
+            const isProtectedRoute =
+              pathname !== "/" &&
+              (pathname?.startsWith("/schedule") || pathname?.startsWith("/admin"));
+
+            if (isInitialized && isProtectedRoute) {
+              router.replace("/");
+            }
           }
+        }
+      } catch (error) {
+        console.error("Error en handleAuthStateChange:", error);
+        if (!isUnmountedRef.current) {
+          setUser(null);
         }
       } finally {
-        // No establecer loading a false inmediatamente si estamos en una ruta protegida
-        // para evitar parpadeo de contenido no autorizado
-        const isProtectedRoute =
-          pathname !== "/" &&
-          (pathname?.startsWith("/schedule") || pathname?.startsWith("/admin"));
+        // Finalizar loading con un pequeño delay para móviles
+        if (!isUnmountedRef.current) {
+          const isMobile =
+            typeof window !== "undefined" && window.innerWidth < 768;
+          const delay = isMobile ? 150 : 50;
 
-        // Si no hay usuario y estamos en una ruta protegida, mantener loading hasta la redirección
-        if (!firebaseUser && isProtectedRoute) {
-          setTimeout(() => {
-            setLoading(false);
-            setIsInitialized(true);
-          }, 100);
-        } else {
-          setLoading(false);
-          setIsInitialized(true);
+          timeoutRef.current = setTimeout(() => {
+            if (!isUnmountedRef.current) {
+              setLoading(false);
+              setIsInitialized(true);
+            }
+          }, delay);
         }
       }
-    });
+    };
 
-    return unsubscribe;
-  }, [router, isInitialized, pathname]);
+    // Configurar el listener
+    unsubscribeRef.current = auth.onAuthStateChanged(handleAuthStateChange);
+
+    return cleanup;
+  }, [router, pathname, isInitialized, clearAuthState]);
+
+  // Timeout de seguridad para evitar loading infinito
+  useEffect(() => {
+    const maxLoadingTimeout = setTimeout(() => {
+      if (loading && !isUnmountedRef.current) {
+        console.warn("Timeout de loading alcanzado, finalizando loading state");
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    }, 8000); // 8 segundos máximo
+
+    return () => clearTimeout(maxLoadingTimeout);
+  }, [loading]);
+
+  // Detectar cambios de visibilidad para limpiar estados residuales
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isInitialized) {
+        // Verificar inconsistencias cuando la página vuelve a estar visible
+        const currentUser = auth.currentUser;
+        if ((currentUser && !user) || (!currentUser && user)) {
+          console.log("Detectada inconsistencia de estado al volver a la página visible");
+          refreshAuthState();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [user, isInitialized, refreshAuthState]);
 
   // Mostrar pantalla de carga durante la verificación de autenticación
   if (loading) {
@@ -155,7 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, clearAuthState, refreshAuthState }}>
       {children}
     </AuthContext.Provider>
   );

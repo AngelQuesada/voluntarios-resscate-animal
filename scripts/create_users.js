@@ -2,22 +2,65 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 
-// Carga las credenciales de la cuenta de servicio
-let serviceAccount;
-try {
-  serviceAccount = require('../serviceAccountKey.json');
-} catch (error) {
-  console.error("Error: No se pudo cargar el archivo serviceAccountKey.json.");
-  console.error("Asegúrate de que el archivo existe en la raíz del proyecto (../serviceAccountKey.json) o ajusta la ruta.");
-  process.exit(1);
+// Función para inicializar Firebase Admin (similar a la aplicación web)
+function initializeFirebaseAdmin() {
+  if (admin.apps.length > 0) {
+    return; // Ya está inicializado
+  }
+
+  try {
+    // En desarrollo local, intentar cargar desde archivo primero
+    const serviceAccountPath = path.join(__dirname, '../serviceAccountKey.json');
+    
+    if (fs.existsSync(serviceAccountPath)) {
+      // Usar archivo de credenciales en desarrollo local
+      const serviceAccount = require(serviceAccountPath);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id
+      });
+      console.log('Firebase Admin inicializado con archivo de credenciales');
+      return;
+    }
+    
+    // Si no hay archivo, usar variables de entorno
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    
+    if (!privateKey || !process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL) {
+      throw new Error('No se encontró serviceAccountKey.json ni variables de entorno configuradas correctamente');
+    }
+    
+    const credentials = {
+      type: 'service_account',
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+      private_key: privateKey,
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      client_id: process.env.FIREBASE_CLIENT_ID,
+      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+      token_uri: 'https://oauth2.googleapis.com/token',
+      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+      client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
+      universe_domain: 'googleapis.com'
+    };
+
+    admin.initializeApp({
+      credential: admin.credential.cert(credentials),
+      projectId: process.env.FIREBASE_PROJECT_ID
+    });
+    
+    console.log('Firebase Admin inicializado con variables de entorno');
+  } catch (error) {
+    console.error('Error inicializando Firebase Admin:', error.message);
+    console.error('\nAsegúrate de tener:');
+    console.error('1. El archivo serviceAccountKey.json en la raíz del proyecto, O');
+    console.error('2. Las variables de entorno FIREBASE_* configuradas correctamente');
+    process.exit(1);
+  }
 }
 
-// Inicializar Firebase Admin SDK si no está ya inicializado
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-}
+// Inicializar Firebase Admin
+initializeFirebaseAdmin();
 
 const db = admin.firestore();
 const auth = admin.auth();
@@ -84,6 +127,7 @@ async function importUsersFromJson() {
       }
 
       // Preparar datos para Firestore (sin el email si ya está en Auth, y sin uid porque es el ID del doc)
+      const currentTimestamp = new Date().toISOString();
       const userDocumentData = {
         email, // Guardamos el email también en Firestore por consistencia con tu estructura User
         name,
@@ -91,7 +135,8 @@ async function importUsersFromJson() {
         roles,
         ...firestoreData, // El resto de los campos, incluyendo isEnabled
         uid: userAuthRecord.uid, // Aseguramos que el uid en Firestore coincida con el de Auth
-        createdAt: firestoreData.createdAt || new Date().toISOString(), // Añadir createdAt si no existe
+        createdAt: firestoreData.createdAt || currentTimestamp,
+        updatedAt: currentTimestamp, 
       };
       
       // Eliminar campos que no queremos duplicar o que no pertenecen a la colección users

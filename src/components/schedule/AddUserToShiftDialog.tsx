@@ -31,12 +31,22 @@ const AddUserToShiftDialog: React.FC<AddUserToShiftDialogProps> = ({
   const alreadyAssignedIds = new Set(currentAssignments.map(a => a.uid));
 
   const filteredUsers = users
-    .filter(user => 
-      !alreadyAssignedIds.has(user.id) &&
-      (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastname?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      user.isEnabled !== false
-    )
+    .filter(user => {
+      // Filtrar usuarios ya asignados
+      if (alreadyAssignedIds.has(user.id)) return false;
+      
+      // Filtrar usuarios deshabilitados
+      if (user.isEnabled === false) return false;
+      
+      // Si no hay término de búsqueda, incluir todos los usuarios válidos
+      if (!searchTerm.trim()) return true;
+      
+      // Si hay término de búsqueda, verificar coincidencias
+      const fullName = `${user.name || ""} ${user.lastname || ""}`.trim();
+      return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (user.lastname || "").toLowerCase().includes(searchTerm.toLowerCase());
+    })
     .sort((a, b) => {
       const getHighestRole = (user: User) => {
         if (!user.roles || user.roles.length === 0) return UserRoles.VOLUNTARIO;

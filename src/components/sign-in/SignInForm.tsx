@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { TextField, Box, Alert } from "@mui/material";
+import React, { useState, useEffect, useRef } from "react";
+import { TextField, Box, Alert, FormControlLabel, Checkbox } from "@mui/material";
 import SubmitButton from "./SubmitButton";
 import { triggerVibration } from '@/lib/vibration';
 import { textFieldStyles } from "@/styles/formStyles";
@@ -11,7 +11,9 @@ interface SignInFormProps {
   setPassword: (password: string) => void;
   error: string | null;
   isLoading: boolean;
-  handleSignIn: (e: React.FormEvent) => Promise<void>;
+  handleSignIn: (e: React.FormEvent, rememberMe?: boolean) => Promise<void>;
+  resetForm: () => void;
+  onSilentReset?: () => void;
 }
 
 const SignInForm = ({
@@ -24,10 +26,30 @@ const SignInForm = ({
   handleSignIn,
 }: SignInFormProps) => {
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [formErrors, setFormErrors] = useState({
     email: "",
     password: "",
   });
+  
+  const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading && submitTimeoutRef.current) {
+      clearTimeout(submitTimeoutRef.current);
+      submitTimeoutRef.current = null;
+    }
+  }, [isLoading]);
 
   const validateField = (field: "email" | "password") => {
     if (field === "email" && !email.trim()) {
@@ -74,12 +96,23 @@ const SignInForm = ({
       return;
     }
 
-    await handleSignIn(e);
+    // Limpiar timeout previo si existe
+    if (submitTimeoutRef.current) {
+      clearTimeout(submitTimeoutRef.current);
+      submitTimeoutRef.current = null;
+    }
+
+    try {
+      await handleSignIn(e, rememberMe);
+    } catch (error) {
+      console.error('Error en login:', error);
+    }
   };
 
   return (
     <Box
       component="form"
+      ref={formRef}
       onSubmit={handleSubmit}
       noValidate
       sx={{ mt: 1, width: "100%" }}
@@ -125,6 +158,18 @@ const SignInForm = ({
           submitAttempted && formErrors.password ? formErrors.password : ""
         }
         sx={textFieldStyles}
+      />
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            color="primary"
+            disabled={isLoading}
+          />
+        }
+        label="Recordarme"
+        sx={{ mt: 1, mb: 1 }}
       />
       {error && (
         <Alert severity="error" sx={{ width: "100%", mt: 2, mb: 1 }}>

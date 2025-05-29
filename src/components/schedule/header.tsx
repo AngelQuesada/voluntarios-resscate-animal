@@ -77,6 +77,7 @@ export function Header() {
                 variant="h6"
                 component="div"
                 sx={{ fontWeight: "bold" }}
+                color={"primary.main"}
               >
                 Rescate Animal Granada
               </Typography>

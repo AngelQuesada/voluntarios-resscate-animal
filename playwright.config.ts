@@ -35,6 +35,11 @@ export default defineConfig({
       testMatch: /history-view\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'user-history-tests',
+      testMatch: /user-history\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     // Navegadores adicionales
     {
       name: 'firefox',
@@ -49,6 +54,6 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 60000, // 60 segundos para iniciar el servidor
+    timeout: 60000, 
   },
 });

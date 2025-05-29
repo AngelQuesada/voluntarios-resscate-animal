@@ -2,6 +2,34 @@
 
 Este documento detalla las medidas de seguridad implementadas en el Sistema de Gestión de Voluntariado para Rescate Animal, así como recomendaciones para mantener la aplicación segura.
 
+## Gestión de credenciales
+
+### Firebase Admin SDK
+
+El sistema utiliza **exclusivamente variables de entorno** para las credenciales de Firebase Admin, eliminando completamente el uso de archivos de credenciales:
+
+**✅ Configuración segura actual:**
+- Variables de entorno para todas las credenciales
+- Sin archivos de credenciales en el repositorio
+- Configuración diferente para desarrollo y producción
+
+**❌ Evitado:**
+- Archivos `serviceAccountKey.json` en el repositorio
+- Credenciales hardcodeadas en el código
+- Exposición accidental de claves privadas
+
+### Variables de entorno sensibles
+
+Las siguientes variables contienen información crítica y deben protegerse:
+
+```bash
+# Variables sensibles - NUNCA incluir en Git
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-xxxxx@proyecto.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY_ID="..."
+FIREBASE_CLIENT_ID="..."
+```
+
 ## Autenticación y autorización
 
 ### Autenticación

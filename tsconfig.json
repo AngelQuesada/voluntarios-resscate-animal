@@ -23,6 +23,12 @@
       }
     ],
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": [
+      "jest",
+      "node",
+      "@testing-library/jest-dom"
+    ],
     "paths": {
       "@/*": [
         "./src/*"
@@ -33,9 +39,13 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "__tests__/**/*",
+    "jest.setup.js",
+    "src/types/jest.d.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "tests/e2e"
   ]
 }

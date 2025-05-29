@@ -193,8 +193,6 @@ test.describe('Asignación y desasignación de turnos por roles', () => {
         
         // Esta parte debería pasar cuando se implemente la funcionalidad
         test.fail(true, 'Los administradores deberían poder añadir usuarios a turnos vacíos, pero esta funcionalidad no está implementada');
-      } else {
-        console.log('No se encontraron turnos vacíos para probar.');
       }
     }
   });

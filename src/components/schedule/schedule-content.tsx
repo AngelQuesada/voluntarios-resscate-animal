@@ -14,6 +14,7 @@ import ScheduleTabsComponent from "./ScheduleTabsComponent";
 import LoadingScreen from "./LoadingScreen";
 import InfiniteScrollLoader from "./InfiniteScrollLoader";
 import ShiftRow from "./ShiftRow";
+import UserHistoryTab from "../history/UserHistoryTab"; // Added import
 import { es } from 'date-fns/locale';
 
 export default function ScheduleContent({
@@ -85,6 +86,16 @@ export default function ScheduleContent({
       }, 400);
     }
   }, [isLoadingMoreDays, shouldLoadMoreDays, setVisibleDaysCount, allDaysToDisplay.length]);
+
+  // Convertir allUsersList al formato esperado por AddUserToShiftDialog
+  const formattedUsersForDialog = allUsersList.map(user => {
+    const fullUser = usersMap[user.id];
+    return {
+      ...fullUser,
+      id: user.id,
+      isEnabled: fullUser?.isEnabled
+    };
+  });
 
   // Manejo de errores
   if (authError || shiftsError) {
@@ -269,33 +280,44 @@ export default function ScheduleContent({
     <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
       <Box sx={{ maxWidth: "800px", width: "100%" }}>
         {/* Pestañas de navegación */}
-        <ScheduleTabsComponent 
+        <ScheduleTabsComponent
           activeTab={activeTab}
           myShiftsCount={myShiftsCount}
           handleTabChange={handleTabChange}
         />
 
-        {/* Listado de días */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {activeTab === 0 ? (
-            // Vista de "Todos los turnos"
-            daysToDisplay.map(date => renderAllShiftsDay(date))
-          ) : (
-            // Vista de "Mis turnos"
-            daysToDisplay
-              .map(date => renderMyShiftsDay(date))
-              .filter(Boolean)
-          )}
-        </Box>
+        {/* Contenido de las pestañas */}
+        {activeTab === 0 && (
+          <>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {daysToDisplay.map(date => renderAllShiftsDay(date))}
+            </Box>
+            <InfiniteScrollLoader
+              isVisible={shouldShowLoader}
+              onIntersect={handleLoaderIntersection}
+            />
+            <Box sx={{ height: '100px' }} /> {/* Espacio PWA */}
+          </>
+        )}
 
-        {/* Indicador de carga infinita con detector de intersección */}
-        <InfiniteScrollLoader 
-          isVisible={shouldShowLoader} 
-          onIntersect={handleLoaderIntersection} 
-        />
+        {activeTab === 1 && (
+          <>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {daysToDisplay
+                .map(date => renderMyShiftsDay(date))
+                .filter(Boolean)}
+            </Box>
+            <InfiniteScrollLoader
+              isVisible={shouldShowLoader}
+              onIntersect={handleLoaderIntersection}
+            />
+            <Box sx={{ height: '100px' }} /> {/* Espacio PWA */}
+          </>
+        )}
         
-        {/* Espacio adicional al final para PWA */}
-        <Box sx={{ height: '100px' }} />
+        {activeTab === 2 && (
+          <UserHistoryTab currentUser={currentUser} />
+        )}
       </Box>
 
       {/* Diálogos */}
@@ -325,7 +347,7 @@ export default function ScheduleContent({
         open={addUserDialogOpen}
         onClose={cancelAddUser}
         onAddUser={confirmAddUserToShift}
-        users={allUsersList}
+        users={formattedUsersForDialog}
         currentAssignments={
           shiftForUserAssignment && processedAssignments[shiftForUserAssignment.dateKey]?.[shiftForUserAssignment.shiftKey]
             ? (processedAssignments[shiftForUserAssignment.dateKey]![shiftForUserAssignment.shiftKey]! as { uid: string; name: string }[])

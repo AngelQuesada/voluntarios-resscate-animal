@@ -2,7 +2,11 @@ import React from "react";
 import Image from "next/image";
 import { Box, CircularProgress, Typography, useTheme } from "@mui/material";
 
-const LoadingScreen: React.FC = () => {
+interface LoadingScreenProps {
+  message?: string;
+}
+
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = "Cargando..." }) => {
   const theme = useTheme();
   return (
     <Box
@@ -39,7 +43,7 @@ const LoadingScreen: React.FC = () => {
       </Box>
       <CircularProgress size={60} color="primary" />
       <Typography variant="h6" color="primary">
-        Cargando turnos...
+        {message}
       </Typography>
     </Box>
   );

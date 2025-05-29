@@ -1,11 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import admin from 'firebase-admin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { UserRoles } from '@/lib/constants';
-
-// Inicializar Firebase Admin SDK
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -28,19 +23,42 @@ export default async function handler(
     const mainRole = finalRoles[0] || UserRoles.VOLUNTARIO;
 
     // Crear usuario en Authentication
-    const userRecord = await admin.auth().createUser({
+    const userRecord = await getAdminAuth().createUser({
       email,
       password,
       displayName: `${userData.name} ${userData.lastname}`,
     });
 
     // Asignar claims basados en los roles
-    await admin.auth().setCustomUserClaims(userRecord.uid, {
+    await getAdminAuth().setCustomUserClaims(userRecord.uid, {
       role: mainRole,
       roles: finalRoles,
     });
 
-    return res.status(200).json({ uid: userRecord.uid });
+    // Guardar usuario en Firestore
+    const currentTimestamp = new Date().toISOString();
+    const userDocumentData = {
+      email,
+      username: userData.username || '',
+      name: userData.name || '',
+      lastname: userData.lastname || '',
+      birthdate: userData.birthdate || '',
+      phone: userData.phone || '',
+      job: userData.job || '',
+      location: userData.location || '',
+      roles: finalRoles,
+      isEnabled: userData.isEnabled !== undefined ? userData.isEnabled : true,
+      createdAt: currentTimestamp,
+      updatedAt: currentTimestamp
+    };
+
+    await getAdminFirestore().collection('users').doc(userRecord.uid).set(userDocumentData);
+
+    // Retornar el usuario completo
+    return res.status(200).json({ 
+      uid: userRecord.uid,
+      ...userDocumentData
+    });
   } catch (error: any) {
     console.error('Error creating user:', error);
     return res.status(500).json({

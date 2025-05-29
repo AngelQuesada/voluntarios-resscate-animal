@@ -6,6 +6,10 @@ Este documento detalla los endpoints de API disponibles en el Sistema de Gestió
 
 La API está construida utilizando las API Routes de Next.js y se comunica con Firebase para la persistencia de datos. Todos los endpoints requieren autenticación, a menos que se indique lo contrario.
 
+### Configuración de Firebase Admin
+
+La API utiliza Firebase Admin SDK con credenciales configuradas através de variables de entorno. Esto garantiza la seguridad tanto en desarrollo como en producción.
+
 ## Autenticación
 
 La autenticación se implementa utilizando Firebase Authentication. Para acceder a los endpoints protegidos, se requiere incluir un token JWT válido en el encabezado de autorización:
@@ -107,6 +111,54 @@ Crea un nuevo usuario. Requiere rol de administrador.
   "isEnabled": "boolean"
 }
 ```
+
+#### Crear usuario (Firebase Auth y Firestore)
+
+```
+POST /api/create-user
+```
+
+Crea un nuevo usuario en Firebase Authentication y Firestore. Requiere rol de administrador.
+
+**Cuerpo de la solicitud:**
+```json
+{
+  "email": "string",
+  "password": "string",
+  "name": "string",
+  "lastname": "string",
+  "username": "string",
+  "phone": "string",
+  "job": "string",
+  "location": "string",
+  "birthdate": "string",
+  "roles": "number[]",
+  "isEnabled": "boolean"
+}
+```
+
+**Respuesta exitosa (200):**
+```json
+{
+  "uid": "string",
+  "email": "string",
+  "username": "string",
+  "name": "string",
+  "lastname": "string",
+  "birthdate": "string",
+  "phone": "string",
+  "job": "string",
+  "location": "string",
+  "roles": "number[]",
+  "isEnabled": "boolean",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+**Errores comunes:**
+- **400**: Datos faltantes o inválidos
+- **500**: Error al crear usuario en Firebase Auth o Firestore
 
 #### Actualizar usuario
 

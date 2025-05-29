@@ -3,6 +3,9 @@ import { ShiftAssignment } from "@/store/api/shiftsApi";
 import { CurrentUser, User } from "@/types/common";
 import { ProcessedAssignments } from "@/hooks/schedule/useShiftsData";
 
+// Re-exportar el tipo User para que esté disponible
+export type { User } from "@/types/common";
+
 export interface NotificationSnackbarProps {
   open: boolean;
   message: React.ReactNode;
@@ -50,7 +53,7 @@ export interface AddUserToShiftDialogProps {
   open: boolean;
   onClose: () => void;
   onAddUser: (userId: string) => void;
-  users: Array<{ id: string; name?: string; lastname?: string; roles?: number[] }>;
+  users: Array<User & { id: string; isEnabled?: boolean }>;
   currentAssignments: Array<{ uid: string; name: string }>;
 }
 

@@ -120,7 +120,8 @@ export function AdminPanel() {
     handleAddRoleChange,
     handleEditRoleChange,
     isAddingUser,
-    isEditingUser
+    isEditingUser,
+    isDeletingUser
   } = useAdminPanel();
 
   const sortedFilteredUsers = React.useMemo(() => {
@@ -480,7 +481,8 @@ export function AdminPanel() {
             label: "Eliminar",
             onClick: handleDeleteUser,
             color: "error",
-            variant: "contained"
+            variant: "contained",
+            loading: isDeletingUser
           }
         ]}
       />

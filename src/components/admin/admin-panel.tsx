@@ -114,6 +114,7 @@ export function AdminPanel() {
     handleSearchChange,
     filteredUsers,
     handleEditEnabledSwitchChange,
+    handleEnabledSwitchChange,
     addSubmitAttempted,
     editSubmitAttempted,
     handleAddRoleChange,
@@ -429,7 +430,7 @@ export function AdminPanel() {
             isAddMode={true}
             onRoleChange={handleAddRoleChange}
             submitAttempted={addSubmitAttempted}
-            handleEnabledSwitchChange={() => {}}
+            handleEnabledSwitchChange={handleEnabledSwitchChange}
           />
         }
         error={formError}

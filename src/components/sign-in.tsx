@@ -1,53 +1,45 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Container, Paper, Avatar, Typography, CssBaseline } from "@mui/material";
 import { useAuth } from "@/hooks/useAuth";
-import { useResidualStateCleanup } from "@/hooks/useResidualStateCleanup";
 import SignInForm from "./sign-in/SignInForm";
 import Copyright from "./Copyright";
 import { containerStyles, paperStyles } from "@/styles/formStyles";
 
 const SignIn = () => {
   const [isMounted, setIsMounted] = useState(false);
+  const needsResetRef = useRef(false);
   const auth = useAuth();
 
-  const { performCleanup } = useResidualStateCleanup({
-    onTimeout: () => {
-      console.warn('Se detectó un posible estado colgado en el login');
-      // Forzar un refresh suave si es necesario
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
-    },
-    timeoutMs: 20000,
-    storageKeys: ['loginFormState', 'authRedirectPending', 'loginTimeout', 'firebaseAuthState']
-  });
-  
+  // Reinicio silencioso
+  const handleSilentReset = useCallback(() => {
+    if (needsResetRef.current) return;
+    needsResetRef.current = true;
+    try {
+      // Solo limpiar claves específicas de timeout, no todo el estado de auth
+      sessionStorage.removeItem('loginTimeout');
+    } catch {}
+    // No resetear el formulario automáticamente
+    setTimeout(() => { needsResetRef.current = false; }, 1000);
+  }, []);
+
+
+
   useEffect(() => {
     setIsMounted(true);
-    
-    // Limpieza adicional específica para el componente de login
     if (typeof window !== 'undefined') {
-      // En móviles, forzar un repaint para evitar estados visuales colgados
       const isMobile = window.innerWidth < 768;
       if (isMobile) {
-        // Forzar recálculo de estilos
-        document.body.style.transform = 'translateZ(0)';
-        setTimeout(() => {
-          document.body.style.transform = '';
-        }, 10);
+        const scrollPosition = window.scrollY;
+        requestAnimationFrame(() => {
+          window.scrollTo(0, scrollPosition + 1);
+          window.scrollTo(0, scrollPosition);
+        });
       }
     }
-    
-    return () => {
-      // Cleanup al desmontar
-      performCleanup();
-    };
-  }, [performCleanup]);
+  }, []); 
 
-  if (!isMounted) {
-    return null;
-  }
+  if (!isMounted) return null;
 
   return (
     <Container component="main" maxWidth="xs" sx={containerStyles}>
@@ -65,7 +57,7 @@ const SignIn = () => {
           Rescate Animal Granada
         </Typography>
         
-        <SignInForm {...auth} />
+        <SignInForm {...auth} onSilentReset={handleSilentReset} />
         
         <Copyright />
       </Paper>

@@ -12,6 +12,8 @@ interface SignInFormProps {
   error: string | null;
   isLoading: boolean;
   handleSignIn: (e: React.FormEvent, rememberMe?: boolean) => Promise<void>;
+  resetForm: () => void;
+  onSilentReset?: () => void;
 }
 
 const SignInForm = ({
@@ -29,19 +31,19 @@ const SignInForm = ({
     email: "",
     password: "",
   });
+  
   const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
 
-  // Limpiar timeouts al desmontar
   useEffect(() => {
     return () => {
       if (submitTimeoutRef.current) {
         clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
       }
     };
   }, []);
 
-  // Resetear estados cuando se detecten cambios en error o loading
   useEffect(() => {
     if (!isLoading && submitTimeoutRef.current) {
       clearTimeout(submitTimeoutRef.current);
@@ -97,30 +99,13 @@ const SignInForm = ({
     // Limpiar timeout previo si existe
     if (submitTimeoutRef.current) {
       clearTimeout(submitTimeoutRef.current);
+      submitTimeoutRef.current = null;
     }
-
-    // Establecer un timeout de seguridad para evitar loading infinito
-    submitTimeoutRef.current = setTimeout(() => {
-      console.warn("Timeout de login alcanzado, el login puede haberse colgado");
-      // En caso de timeout, intentar limpiar estados
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.setItem('loginTimeout', Date.now().toString());
-        } catch (error) {
-          console.warn('No se pudo guardar estado de timeout:', error);
-        }
-      }
-    }, 15000);
 
     try {
       await handleSignIn(e, rememberMe);
     } catch (error) {
-      console.error("Error en handleSignIn:", error);
-      // Limpiar timeout si hay error
-      if (submitTimeoutRef.current) {
-        clearTimeout(submitTimeoutRef.current);
-        submitTimeoutRef.current = null;
-      }
+      console.error('Error en login:', error);
     }
   };
 

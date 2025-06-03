@@ -18,6 +18,7 @@
     "test:e2e:roles": "playwright test --project=role-assignment-tests --no-deps",
     "test:e2e:history": "playwright test --project=history-view-tests --no-deps",
     "test:e2e:user-history": "playwright test --project=user-history-tests --no-deps",
+    "test:e2e:user-management": "playwright test --project=user-management-tests --no-deps",
     "test:e2e:sequence": "playwright test --project=login-tests --project=role-assignment-tests --project=history-view-tests",
     "test:e2e:all-sequential": "npm run test:e2e:login && npm run test:e2e:roles && npm run test:e2e:history && npm run test:e2e:user-history",
     "test:e2e:ui": "playwright test --ui",

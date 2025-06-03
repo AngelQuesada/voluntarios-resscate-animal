@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import globalSetup from './tests/e2e/global-setup';
 
 export default defineConfig({
+  globalSetup: require.resolve('./tests/e2e/global-setup'), // Using require.resolve
   testDir: './tests/e2e',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -8,7 +10,7 @@ export default defineConfig({
   workers: 2, 
   reporter: 'html',
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.NODE_ENV === 'test' ? 'http://localhost:3001' : (process.env.BASE_URL || 'http://localhost:3000'),
     trace: 'on-first-retry',
     // Timeouts aumentados para todas las acciones
     actionTimeout: 15000,
@@ -40,6 +42,11 @@ export default defineConfig({
       testMatch: /user-history\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'user-management-tests',
+      testMatch: /user-management\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     // Navegadores adicionales
     {
       name: 'firefox',
@@ -51,8 +58,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    command: 'NODE_ENV=test next dev -p 3001',
+    url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     timeout: 60000, 
   },

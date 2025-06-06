@@ -1,4 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Cargar variables de entorno para pruebas
+const testEnvPath = path.resolve(process.cwd(), '.env.test');
+if (fs.existsSync(testEnvPath)) {
+  dotenv.config({ path: testEnvPath });
+  console.log('✅ Variables de entorno de prueba cargadas desde .env.test');
+} else {
+  // Si no existe, intentar cargar desde .env.test.example
+  const exampleEnvPath = path.resolve(process.cwd(), '.env.test.example');
+  if (fs.existsSync(exampleEnvPath)) {
+    dotenv.config({ path: exampleEnvPath });
+    console.log('⚠️ Variables de entorno de prueba cargadas desde .env.test.example');
+  }
+}
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -15,11 +32,7 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
   projects: [
-    {
-      name: 'chrome',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    // Proyectos específicos para comandos concretos
+    // Proyectos funcionales (agrupan tests por funcionalidad)
     {
       name: 'login-tests',
       testMatch: /login\.spec\.ts/,
@@ -40,20 +53,33 @@ export default defineConfig({
       testMatch: /user-history\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
-    // Navegadores adicionales
     {
-      name: 'firefox',
+      name: 'admin-features-tests',
+      testMatch: /admin-permissions-and-features\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    
+    // Proyectos de compatibilidad con navegadores
+    {
+      name: 'firefox-compatibility',
       use: { ...devices['Desktop Firefox'] },
     },
     {
-      name: 'webkit',
+      name: 'webkit-compatibility',
       use: { ...devices['Desktop Safari'] },
     },
+    
+    // Proyectos para dispositivos móviles
+    {
+      name: 'mobile-android',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'mobile-ios',
+      use: { ...devices['iPhone 12'] },
+    },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60000, 
-  },
+  // Configuración global para todos los tests
+  globalSetup: './tests/helpers/global-setup.ts',
+  globalTeardown: './tests/helpers/global-teardown.ts',
 });

@@ -97,6 +97,31 @@ FIREBASE_CLIENT_X509_CERT_URL=your-cert-url
 - Para producción (Vercel), configúralas en el panel de Environment Variables
 - Nunca subas archivos de credenciales al repositorio Git
 
+## Testing
+
+El proyecto incluye una suite completa de tests para garantizar la calidad y seguridad del sistema:
+
+### Tests de Seguridad y Permisos
+- **Control de acceso por roles**: Verificación de que solo los administradores pueden acceder a funcionalidades críticas
+- **Permisos de asignación de turnos**: Tests que aseguran que solo usuarios autorizados pueden asignar voluntarios a turnos
+- **Acceso al panel de administración**: Validación de restricciones de acceso según el rol del usuario
+
+### Tipos de Tests
+- **Tests unitarios**: Con Jest y React Testing Library
+- **Tests E2E**: Con Playwright para flujos completos de usuario
+- **Tests de integración**: Verificación de interacciones entre componentes
+
+Para ejecutar los tests:
+```bash
+# Tests unitarios
+npm test
+
+# Tests E2E
+npm run test:e2e
+```
+
+Más información en [tests/README.md](tests/README.md)
+
 ## Documentación adicional
 
 Para más información sobre la configuración y uso del sistema, consulta los siguientes documentos:
@@ -108,6 +133,7 @@ Para más información sobre la configuración y uso del sistema, consulta los s
 - [API Documentation](docs/API_DOCS.md)
 - [Guía de despliegue](docs/DEPLOYMENT.md)
 - [Consideraciones de seguridad](docs/SECURITY.md)
+- [Documentación de tests](tests/README.md)
 
 ## Licencia
 

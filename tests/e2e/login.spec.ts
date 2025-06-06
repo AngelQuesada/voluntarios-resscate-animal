@@ -82,9 +82,9 @@ test.describe('Flujo de inicio de sesión', () => {
       return;
     }
     
-    await page.goto(`${process.env.BASE_URL || 'http://localhost:3000'}/schedule`);
-    await page.waitForURL(/^http:\/\/localhost:3000\/?$/, { timeout: 10000 });
+    await page.goto(`${process.env.BASE_URL || 'http://localhost:3001'}/schedule`);
+    await page.waitForURL(`${process.env.BASE_URL}` || 'http://localhost:3001', { timeout: 10000 });
     
-    await expect(page).toHaveURL(/^http:\/\/localhost:3000\/?$/);
+    await expect(page).toHaveURL(/^http:\/\/localhost:3001\/?$/);
   });
 });

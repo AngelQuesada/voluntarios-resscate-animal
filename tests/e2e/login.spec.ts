@@ -1,77 +1,89 @@
 import { test, expect } from '@playwright/test';
+import { loginUser, checkServerStatus, checkPageLoad } from './helpers/e2e-utils';
 
-test.describe('Flujo de inicio de sesión', () => {
-  // Hook de configuración para todos los tests
-  test.beforeEach(async ({ page }) => {
-    // Navegar a la URL base y verificar que carga correctamente
-    await page.goto(`${process.env.BASE_URL || 'http://localhost:3000'}`);
-    
-    // Verificar si la página cargó correctamente o si hay un error 404
-    const is404 = await page.locator('text="404"').isVisible().catch(() => false);
-    
-    if (is404) {
-      console.error('⚠️ La página cargó con error 404. Comprueba que el servidor esté ejecutándose y que BASE_URL sea correcto.');
-      // Capturar una captura de pantalla para diagnóstico
-      await page.screenshot({ path: './test-results/server-not-running.png' });
-      // También obtener el HTML actual para mejor diagnóstico
-      const html = await page.content();
-      console.log('HTML actual:', html.substring(0, 500) + '...');
-      test.fail(true, 'La aplicación devolvió un error 404. Verifica que el servidor esté en ejecución.');
-    }
-    
-    // Esperar a que el formulario de inicio de sesión se cargue
-    await page.waitForSelector('form', { timeout: 5000 }).catch((error) => {
-      console.error('⚠️ No se encontró el formulario de inicio de sesión.', error);
+test.describe('Login Tests', () => {
+  test.beforeEach(async ({ page, request }) => {
+    // Verificar estado del servidor antes de cada test
+    const serverOk = await checkServerStatus(page, request, { 
+      timeout: 5000, 
+      failOnError: false 
     });
-  });
-
-  test('Inicio de sesión de administrador', async ({ page }) => {
-    // Verificar que estamos en la página de inicio de sesión
-    const loginFormExists = await page.locator('form').isVisible().catch(() => false);
-    if (!loginFormExists) {
-      test.fail(true, 'No se detectó el formulario de inicio de sesión');
-      return;
+    
+    if (!serverOk) {
+      throw new Error('❌ El servidor no está disponible en el puerto 3001');
     }
     
-    // Encontrar campos por ID en lugar de por nombre
-    await page.fill('#email', 'administradortest@voluntario.com');
-    await page.fill('#password', 'testing');
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    // Navegar a la página principal
+    await page.goto(`${process.env.BASE_URL || 'http://localhost:3001'}`);
     
-    await expect(page).toHaveURL(/\/schedule$/);
+    // Verificar que la página cargó correctamente
+    const pageLoaded = await checkPageLoad(page);
+    if (!pageLoaded) {
+      throw new Error('❌ La página no cargó correctamente');
+    }
   });
 
-  test('Inicio de sesión de responsable', async ({ page }) => {
-    // Verificar que estamos en la página de inicio de sesión
-    const loginFormExists = await page.locator('form').isVisible().catch(() => false);
-    if (!loginFormExists) {
-      test.fail(true, 'No se detectó el formulario de inicio de sesión');
-      return;
+  test('should login as administrator', async ({ page }) => {
+    console.log('🧪 [INICIANDO] Login como administrador');
+    
+    const loginSuccess = await loginUser(page, {
+      userType: 'ADMIN',
+      checkRedirect: true,
+      expectedRedirectUrl: /\/schedule$/,
+      timeout: 10000
+    });
+    
+    if (!loginSuccess) {
+      console.log('❌ [FALLÓ] Login como administrador | Error: No se pudo completar el login');
+      throw new Error('Login como administrador falló');
     }
     
-    await page.fill('#email', 'responsabletest@voluntario.com');
-    await page.fill('#password', 'testing');
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    // Verificar que estamos en la página de schedule
+    expect(page.url()).toMatch(/\/schedule$/);
     
-    await expect(page).toHaveURL(/\/schedule$/);
+    console.log('✅ [CORRECTO] Login como administrador');
   });
 
-  test('Inicio de sesión de voluntario', async ({ page }) => {
-    // Verificar que estamos en la página de inicio de sesión
-    const loginFormExists = await page.locator('form').isVisible().catch(() => false);
-    if (!loginFormExists) {
-      test.fail(true, 'No se detectó el formulario de inicio de sesión');
-      return;
+  test('should login as responsible', async ({ page }) => {
+    console.log('🧪 [INICIANDO] Login como responsable');
+    
+    const loginSuccess = await loginUser(page, {
+      userType: 'RESPONSABLE',
+      checkRedirect: true,
+      expectedRedirectUrl: /\/schedule$/,
+      timeout: 10000
+    });
+    
+    if (!loginSuccess) {
+      console.log('❌ [FALLÓ] Login como responsable | Error: No se pudo completar el login');
+      throw new Error('Login como responsable falló');
     }
     
-    await page.fill('#email', 'voluntariotest@voluntario.com');
-    await page.fill('#password', 'testing');
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/schedule$/, { timeout: 10000 });
+    // Verificar que estamos en la página de schedule
+    expect(page.url()).toMatch(/\/schedule$/);
     
-    await expect(page).toHaveURL(/\/schedule$/);
+    console.log('✅ [CORRECTO] Login como responsable');
+  });
+
+  test('should login as volunteer', async ({ page }) => {
+    console.log('🧪 [INICIANDO] Login como voluntario');
+    
+    const loginSuccess = await loginUser(page, {
+      userType: 'VOLUNTARIO',
+      checkRedirect: true,
+      expectedRedirectUrl: /\/schedule$/,
+      timeout: 10000
+    });
+    
+    if (!loginSuccess) {
+      console.log('❌ [FALLÓ] Login como voluntario | Error: No se pudo completar el login');
+      throw new Error('Login como voluntario falló');
+    }
+    
+    // Verificar que estamos en la página de schedule
+    expect(page.url()).toMatch(/\/schedule$/);
+    
+    console.log('✅ [CORRECTO] Login como voluntario');
   });
 
   test('Redirección de usuario no autenticado', async ({ page, request }) => {

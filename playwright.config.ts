@@ -1,38 +1,28 @@
 import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
+import { loadTestEnvironmentVariables } from './tests/helpers/vscode-setup';
 
-// Cargar variables de entorno para pruebas
-const testEnvPath = path.resolve(process.cwd(), '.env.test');
-if (fs.existsSync(testEnvPath)) {
-  dotenv.config({ path: testEnvPath });
-  console.log('✅ Variables de entorno de prueba cargadas desde .env.test');
-} else {
-  // Si no existe, intentar cargar desde .env.test.example
-  const exampleEnvPath = path.resolve(process.cwd(), '.env.test.example');
-  if (fs.existsSync(exampleEnvPath)) {
-    dotenv.config({ path: exampleEnvPath });
-    console.log('⚠️ Variables de entorno de prueba cargadas desde .env.test.example');
-  }
-}
+// Cargar variables de entorno para tests
+loadTestEnvironmentVariables();
 
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 2, 
-  reporter: 'html',
+  workers: 2,
+  reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3001',
     trace: 'on-first-retry',
-    // Timeouts aumentados para todas las acciones
-    actionTimeout: 15000,
-    navigationTimeout: 30000,
+    actionTimeout: 10000, 
+    navigationTimeout: 10000, 
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    extraHTTPHeaders: {
+      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
+    },
   },
   projects: [
-    // Proyectos funcionales (agrupan tests por funcionalidad)
     {
       name: 'login-tests',
       testMatch: /login\.spec\.ts/,
@@ -59,23 +49,23 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     
-    // Proyectos de compatibilidad con navegadores
+    // Proyectos de navegadores de escritorio
     {
-      name: 'firefox-compatibility',
+      name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
     },
     {
-      name: 'webkit-compatibility',
+      name: 'safari',
       use: { ...devices['Desktop Safari'] },
     },
     
     // Proyectos para dispositivos móviles
     {
-      name: 'mobile-android',
+      name: 'android',
       use: { ...devices['Pixel 5'] },
     },
     {
-      name: 'mobile-ios',
+      name: 'ios',
       use: { ...devices['iPhone 12'] },
     },
   ],

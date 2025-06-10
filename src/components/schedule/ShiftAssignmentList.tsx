@@ -3,12 +3,12 @@ import { Box, Typography, Tooltip, IconButton } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { UserRoles } from '@/lib/constants';
 import { ShiftAssignment } from '@/store/api/shiftsApi';
-import { CurrentUser, User } from '@/types/common'; // Importar User desde common
+import { CurrentUser, User } from '@/types/common';
 
 interface ShiftAssignmentListProps {
   assignments: ShiftAssignment[];
   currentUser: CurrentUser | null;
-  usersMap: { [uid: string]: User }; // Para obtener detalles como isEnabled
+  usersMap: { [uid: string]: User };
   dayKey: string;
   shiftKey: "M" | "T";
   onAddUserClick: (dayKey: string, shiftKey: "M" | "T") => void;
@@ -108,6 +108,7 @@ const ShiftAssignmentList: React.FC<ShiftAssignmentListProps> = ({
                 transition: "all 0.2s ease",
                 "&:hover": canContact ? { filter: "brightness(0.9)" } : undefined,
               }}
+              data-testid="assignment-user-box"
             >
               <Typography
                 variant="caption"

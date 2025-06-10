@@ -38,6 +38,25 @@ const isValidEmail = (email: string): boolean => {
   return emailPattern.test(email);
 };
 
+// Función que configura la cookie de autenticación de forma segura
+const setAuthCookie = (token: string, maxAge: number) => {
+  const now = new Date();
+  const expires = new Date(now.getTime() + maxAge * 1000);
+  
+  // Configurar la cookie con atributos más seguros
+  document.cookie = `auth-token=${token}; path=/; expires=${expires.toUTCString()}; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+  
+  // Backup del token en localStorage (para Safari)
+  try {
+    localStorage.setItem('auth-token-backup', JSON.stringify({
+      token,
+      expires: expires.getTime()
+    }));
+  } catch (e) {
+    console.warn('No se pudo guardar el backup del token:', e);
+  }
+};
+
 // Función para limpiar estados residuales antes del login
 const clearResidualStates = () => {
   if (typeof window === 'undefined') return;
@@ -55,27 +74,26 @@ const clearResidualStates = () => {
       sessionStorage.removeItem(key);
     });
 
-    // Limpiar localStorage relacionado con Firebase Auth que pueda estar corrupto
+    // Limpiar localStorage relacionado con Firebase Auth
     Object.keys(localStorage).forEach(key => {
-      if (key.includes('firebase:authUser:') && key.includes('[DEFAULT]')) {
+      if (key.includes('firebase:authUser:') || key.includes('auth-token')) {
         try {
-          const authData = localStorage.getItem(key);
-          if (authData) {
-            const parsed = JSON.parse(authData);
-            // Si hay datos pero no hay accessToken válido, limpiar
-            if (!parsed.stsTokenManager?.accessToken) {
+          const value = localStorage.getItem(key);
+          if (value) {
+            const data = JSON.parse(value);
+            // Si los datos están expirados o son inválidos, limpiarlos
+            if (!data || (data.expires && Date.now() > data.expires)) {
               localStorage.removeItem(key);
             }
           }
-        } catch (e) {
-          // Si no se puede parsear, eliminar
+        } catch {
           localStorage.removeItem(key);
         }
       }
     });
 
-    // Limpiar cookies de auth anteriores
-    document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+    // Limpiar cookies de auth de forma segura
+    document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Strict";
     
   } catch (error) {
     console.warn('Error limpiando estados residuales:', error);
@@ -94,7 +112,7 @@ export function useAuth() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(false); // Nuevo estado para autenticación exitosa
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const router = useRouter();
   
   // Ref para evitar múltiples intentos de login simultáneos
@@ -271,7 +289,7 @@ export function useAuth() {
         const userData = userDoc.data();
         if (userData.isEnabled === false) {
           await auth.signOut();
-          setError("Esta cuenta ha sido deshabilitada por el administrador. Por favor, contacta con el administrador para más información.");
+          setError("Esta cuenta ha sido deshabilitada por el administrador.");
           setIsAuthenticating(false);
           return;
         }
@@ -287,11 +305,8 @@ export function useAuth() {
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
       const cookieMaxAge = getCookieDuration(isAdmin, isMobile, rememberMe);
       
-      // Guardar el token en una cookie con configuración mejorada
-      document.cookie = `auth-token=${token}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure=${window.location.protocol === 'https:'}`;
-      
-      // Marcar el login como exitoso en sessionStorage para debugging
-      sessionStorage.setItem('lastSuccessfulLogin', Date.now().toString());
+      // Establecer la cookie de forma segura
+      setAuthCookie(token, cookieMaxAge);
       
       // Resetear el contador de intentos de recuperación si el login es exitoso
       recoveryAttemptsRef.current = 0;
@@ -300,7 +315,6 @@ export function useAuth() {
       setEmail("");
       setPassword("");
       
-      // Mantener isAuthenticating=true para que siga mostrando la pantalla de carga
       router.replace("/schedule");
       
     } catch (error: any) {

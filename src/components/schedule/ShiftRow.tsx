@@ -5,7 +5,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CircleIcon from '@mui/icons-material/Circle';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import { triggerVibration } from '@/lib/vibration'; // Added import
+import { triggerVibration } from '@/lib/vibration';
 import ShiftAssignmentList from './ShiftAssignmentList';
 import { ShiftAssignment } from '@/store/api/shiftsApi';
 import { CurrentUser, User } from '@/types/common';
@@ -129,6 +129,7 @@ const ShiftRow: React.FC<ShiftRowProps> = ({
                     }}
                     color={isCurrentUserAssigned ? "error" : "primary"}
                     size="small"
+                    data-testid={isCurrentUserAssigned ? 'RemoveMyTurn' : 'AddMyTurn' }
                   >
                     {isCurrentUserAssigned ? <RemoveCircleOutlineIcon /> : <AddCircleOutlineIcon />}
                   </IconButton>

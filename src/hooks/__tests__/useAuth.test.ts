@@ -185,7 +185,7 @@ describe('useAuth Hook', () => {
     });
     
     expect(mockSignOut).toHaveBeenCalled();
-    expect(result.current.error).toBe('Esta cuenta ha sido deshabilitada por el administrador. Por favor, contacta con el administrador para más información.');
+    expect(result.current.error).toBe('Esta cuenta ha sido deshabilitada por el administrador.');
     expect(result.current.isLoading).toBe(false);
   });
 

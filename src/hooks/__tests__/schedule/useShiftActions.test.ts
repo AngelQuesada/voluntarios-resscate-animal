@@ -68,6 +68,7 @@ describe('useShiftActions Hook', () => {
       birthdate: '1990-01-01',
       phone: '123456789',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     'user2': { 
       uid: 'user2', 
@@ -79,6 +80,7 @@ describe('useShiftActions Hook', () => {
       birthdate: '1990-01-01',
       phone: '123456789',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
   };
 

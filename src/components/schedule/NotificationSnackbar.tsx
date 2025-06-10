@@ -60,6 +60,7 @@ const NotificationSnackbar: React.FC<NotificationSnackbarProps> = ({
         maxWidth: { sm: "520px" },
         bottom: { xs: 20, sm: 30 },
       }}
+      data-testid='notification-snackbar'
     >
       <Box
         sx={{

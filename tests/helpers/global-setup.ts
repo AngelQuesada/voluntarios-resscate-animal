@@ -4,15 +4,29 @@
  */
 
 import { FullConfig } from '@playwright/test';
-import { setupTestEnvironment, cleanupTestEnvironment } from './setup-test-environment';
+import { 
+  setupTestEnvironment, 
+  cleanupTestEnvironment, 
+  startTestServer, 
+  isServerRunning 
+} from './setup-test-environment';
+import { loadTestEnvironmentVariables } from './vscode-setup';
 
 async function globalSetup(config: FullConfig) {
   console.log('🚀 Iniciando configuración global para tests de Playwright...');
   
+  // Cargar variables de entorno
+  loadTestEnvironmentVariables();
+  
   // Verificar si estamos en modo de prueba
   if (process.env.NODE_ENV !== 'test') {
     console.warn('⚠️ NODE_ENV no está configurado como "test"');
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'test' });
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
     console.log('✅ NODE_ENV configurado como "test"');
   }
 
@@ -30,13 +44,26 @@ async function globalSetup(config: FullConfig) {
     console.log('✅ IS_TESTING_ENVIRONMENT configurado como "true"');
   }
 
-  // Limpiar la base de datos antes de inicializar
+  // 1. Iniciar servidor de testing en puerto 3001
+  console.log('🚀 Verificando/iniciando servidor de testing...');
+  const serverRunning = await isServerRunning(3001);
+  
+  if (!serverRunning) {
+    const serverStarted = await startTestServer(3001);
+    if (!serverStarted) {
+      console.error('❌ Error al iniciar el servidor de testing');
+      process.exit(1);
+    }
+  } else {
+    console.log('✅ Servidor de testing ya está ejecutándose');
+  }
+
+  // 2. Limpiar la base de datos antes de inicializar
   console.log('🧹 Limpiando base de datos antes de inicializar tests...');
   await cleanupTestEnvironment();
   
-  // Inicializar entorno de prueba con configuración básica
-  // Esto creará los usuarios pero no los turnos
-  // Los turnos se crearán en cada test según sea necesario
+  // 3. Inicializar entorno de prueba con usuarios constantes
+  // Los datos variables (turnos, usuarios adicionales) se crearán en cada test según sea necesario
   const setupSuccess = await setupTestEnvironment({
     requireUsers: true,
     requireShifts: false
@@ -48,6 +75,10 @@ async function globalSetup(config: FullConfig) {
   }
 
   console.log('✅ Configuración global completada correctamente');
+  console.log('📋 Resumen:');
+  console.log(`   - Servidor de testing: ${process.env.BASE_URL || 'http://localhost:3001'}`);
+  console.log('   - Usuarios constantes: Creados');
+  console.log('   - Base de datos: Limpia y lista');
 }
 
 export default globalSetup;

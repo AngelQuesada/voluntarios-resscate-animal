@@ -1,103 +1,132 @@
 /**
- * Configuración específica para la extensión de Playwright de VSCode
+ * Configuración para la extensión de Playwright en VS Code
  * Este archivo proporciona funciones para inicializar el entorno de prueba
- * cuando se ejecutan tests individuales desde VSCode
+ * específicamente para la extensión de Playwright en VS Code
  */
 
-import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
-import { setupTestEnvironment, cleanupTestEnvironment } from './setup-test-environment';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+import {
+  setupTestEnvironment,
+  cleanupTestEnvironment,
+  verifyTestEnvironment,
+  startTestServer,
+  isServerRunning,
+} from './setup-test-environment';
+import { TestEnvironmentOptions } from './test-db-setup';
 
 /**
- * Carga las variables de entorno necesarias para los tests
+ * Carga las variables de entorno para el entorno de prueba
  */
 export function loadTestEnvironmentVariables() {
-  // Cargar variables de entorno para pruebas
-  const testEnvPath = path.resolve(process.cwd(), '.env.test');
-  
-  if (fs.existsSync(testEnvPath)) {
-    dotenv.config({ path: testEnvPath });
-    console.log('✅ Variables de entorno de prueba cargadas desde .env.test');
+  // Intentar cargar .env.test primero, si no existe, cargar .env.test.example
+  const envTestPath = path.resolve(process.cwd(), '.env.test');
+  const envTestExamplePath = path.resolve(process.cwd(), '.env.test.example');
+
+  if (fs.existsSync(envTestPath)) {
+    console.log('📄 Cargando variables de entorno desde .env.test');
+    dotenv.config({ path: envTestPath });
+  } else if (fs.existsSync(envTestExamplePath)) {
+    console.log('📄 Archivo .env.test no encontrado, cargando desde .env.test.example');
+    dotenv.config({ path: envTestExamplePath });
   } else {
-    // Si no existe, intentar cargar desde .env.test.example
-    const exampleEnvPath = path.resolve(process.cwd(), 'tests/.env.test.example');
-    
-    if (fs.existsSync(exampleEnvPath)) {
-      dotenv.config({ path: exampleEnvPath });
-      console.log('⚠️ Variables de entorno de prueba cargadas desde .env.test.example');
-    }
+    console.warn('⚠️ No se encontraron archivos .env.test ni .env.test.example');
   }
 
-  // Configurar variables de entorno necesarias
-  if (process.env.NODE_ENV !== 'test') {
-    process.env.NODE_ENV = 'test';
-  }
-  
-  if (process.env.DISABLE_PWA !== 'true') {
-    process.env.DISABLE_PWA = 'true';
-  }
-  
-  if (process.env.IS_TESTING_ENVIRONMENT !== 'true') {
-    process.env.IS_TESTING_ENVIRONMENT = 'true';
-  }
+  // Establecer variables de entorno críticas para el entorno de prueba
+  Object.defineProperty(process.env, 'NODE_ENV', {
+    value: 'test',
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
+  process.env.DISABLE_PWA = 'true';
+  process.env.IS_TESTING_ENVIRONMENT = 'true';
+  process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 }
 
 /**
- * Inicializa el entorno de prueba para tests individuales
- * Esta función se puede llamar desde beforeAll en tests específicos
+ * Inicializa el entorno de prueba para VS Code
  */
-export async function initializeTestEnvironmentForVSCode(options: {
-  requireUsers?: boolean;
-  requireShifts?: boolean;
-  cleanFirst?: boolean;
-  pastDays?: number;
-  futureDays?: number;
-} = {}) {
+export async function initializeTestEnvironmentForVSCode(options: TestEnvironmentOptions = {}) {
   const {
     requireUsers = true,
     requireShifts = false,
-    cleanFirst = true,
     pastDays = 7,
-    futureDays = 14
+    futureDays = 7,
+    cleanupBeforeSetup = true,
   } = options;
 
-  // Cargar variables de entorno
+  console.log('🔧 Inicializando entorno de prueba para VS Code...');
+
+  // 1. Cargar variables de entorno
   loadTestEnvironmentVariables();
 
-  // Limpiar datos existentes si se solicita
-  if (cleanFirst) {
-    console.log('🧹 Limpiando base de datos antes de inicializar...');
+  // 2. Verificar si el servidor está en ejecución, si no, iniciarlo
+  const serverRunning = await isServerRunning();
+  if (!serverRunning) {
+    console.log('🚀 Iniciando servidor de testing en puerto 3001...');
+    const serverStarted = await startTestServer();
+    if (!serverStarted) {
+      console.error('❌ Error al iniciar el servidor de testing');
+      return false;
+    }
+  } else {
+    console.log('✅ Servidor de testing ya está en ejecución en puerto 3001');
+  }
+
+  // 3. Limpiar entorno si es necesario
+  if (cleanupBeforeSetup) {
+    console.log('🧹 Limpiando entorno antes de configurar...');
     await cleanupTestEnvironment();
   }
 
-  // Configurar entorno de prueba
+  // 4. Configurar entorno de prueba
+  console.log('🔄 Configurando entorno de prueba...');
   const setupSuccess = await setupTestEnvironment({
     requireUsers,
     requireShifts,
     pastDays,
-    futureDays
+    futureDays,
   });
 
   if (!setupSuccess) {
-    throw new Error('❌ Error al inicializar el entorno de prueba');
+    console.error('❌ Error al configurar el entorno de prueba');
+    return false;
   }
 
-  console.log('✅ Entorno de prueba inicializado correctamente para VSCode');
+  // 5. Verificar que todo esté correctamente configurado
+  const isEnvironmentReady = await verifyTestEnvironment();
+  if (!isEnvironmentReady) {
+    console.error('❌ El entorno de prueba no está listo');
+    return false;
+  }
+
+  console.log('✅ Entorno de prueba inicializado correctamente');
   return true;
 }
 
 /**
- * Limpia el entorno de prueba después de los tests
- * Esta función se puede llamar desde afterAll en tests específicos
+ * Limpia el entorno de prueba para VS Code
  */
 export async function cleanupTestEnvironmentForVSCode() {
-  // Solo limpiar si AUTO_CLEANUP_TEST_DATA está habilitado
+  console.log('🧹 Limpiando entorno de prueba para VS Code...');
+
+  // Verificar si debemos limpiar automáticamente
   if (process.env.AUTO_CLEANUP_TEST_DATA === 'true') {
-    console.log('🧹 Limpiando entorno de prueba después de los tests...');
-    await cleanupTestEnvironment();
+    console.log('🔄 Limpieza automática activada');
+    const cleanupSuccess = await cleanupTestEnvironment();
+
+    if (!cleanupSuccess) {
+      console.error('❌ Error al limpiar el entorno de prueba');
+      return false;
+    }
+
     console.log('✅ Entorno de prueba limpiado correctamente');
+    return true;
   } else {
-    console.log('🔶 Limpieza automática desactivada, manteniendo datos de prueba');
+    console.log('ℹ️ Limpieza automática desactivada');
+    return false;
   }
 }

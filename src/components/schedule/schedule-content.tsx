@@ -87,7 +87,6 @@ export default function ScheduleContent({
     }
   }, [isLoadingMoreDays, shouldLoadMoreDays, setVisibleDaysCount, allDaysToDisplay.length]);
 
-  // Convertir allUsersList al formato esperado por AddUserToShiftDialog
   const formattedUsersForDialog = allUsersList.map(user => {
     const fullUser = usersMap[user.id];
     return {
@@ -122,7 +121,8 @@ export default function ScheduleContent({
     return (
       <Paper 
         key={dateKey}
-        elevation={1} 
+        elevation={1}
+        className="shift-day"
         sx={{ 
           p: 2, 
           mb: 2, 
